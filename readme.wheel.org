@@ -1,0 +1,750 @@
+#+TITLE: Python Wheel Distributions Guide
+#+AUTHOR: Yuriy Gritsenko
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+#+begin_quote
+A brief guide to creating wheeled Python distributions.
+#+end_quote
+
+* Contents                                                         :noexport:
+:PROPERTIES:
+:TOC:       :include all :depth 2
+:END:
+
+:CONTENTS:
+- [[#overview][Overview]]
+  - [[#distribution-formats][Distribution Formats]]
+  - [[#wheel-types][Wheel Types]]
+  - [[#setting-up-your-environment][Setting Up Your Environment]]
+  - [[#recommended-layout][Recommended Layout]]
+  - [[#building-wheels][Building Wheels]]
+  - [[#install-and-uninstall-package][Install and uninstall package]]
+  - [[#troubleshooting-package][Troubleshooting Package]]
+- [[#examples][Examples]]
+  - [[#example1-hellolib-packagelibrary][Example1, 'hellolib' (package/library)]]
+  - [[#example2-hello-cli-application][Example2, 'hello' (CLI application)]]
+:END:
+
+* Overview
+
+Python wheel is a relatively new standard for Python binary package distribution, replacing
+the older egg format. Wheels offer faster installation, improved security, and better
+consistency across platforms.
+
+** Distribution Formats
+
+*** Source Distribution (sdist)
+
+A source distribution is a .tar.gz archive containing your project's source code plus metadata.
+
+#+begin_src text
+my-package-1.0.0.tar.gz
+├── my_package/
+│   ├── __init__.py
+│   └── module.py
+├── setup.py or pyproject.toml
+├── README.md
+├── LICENSE
+└── PKG-INFO
+#+end_src
+
+Key characteristics:
+- Platform-independent
+- Requires a build step during installation
+- Contains source code only (not compiled code)
+- Often includes documentation and tests
+
+*** Wheel Distribution (bdist_wheel)
+
+A wheel is a .whl file (ZIP-format archive) containing pre-built files ready for installation.
+
+#+begin_src text
+my_package-1.0.0-py3-none-any.whl
+├── my_package/
+│   ├── __init__.py
+│   └── module.py
+└── my_package-1.0.0.dist-info/
+    ├── METADATA
+    ├── RECORD
+    ├── WHEEL
+    └── top_level.txt
+#+end_src
+
+Key characteristics:
+- Pre-built, ready for immediate installation
+- No compilation required during installation
+- Faster installation than sdists
+- Doesn't include tests or documentation
+- Platform-specific when including compiled extensions
+
+** Wheel Types
+
+*** Pure Python Wheels
+
+Pure Python wheels contain only Python code (no compiled extensions). They use the
+"py3-none-any" tag indicating compatibility with any platform.
+
+*** Platform Wheels
+
+Platform wheels contain compiled extensions and are specific to an operating system,
+architecture, and sometimes Python implementation. Examples:
+
+#+begin_src text
+my_package-1.0.0-cp39-cp39-win_amd64.whl             # Windows 64-bit, Python 3.9
+my_package-1.0.0-cp39-cp39-macosx_10_9_x86_64.whl    # macOS, Python 3.9
+my_package-1.0.0-cp39-cp39-manylinux_2_17_x86_64.whl # Linux, Python 3.9
+#+end_src
+
+*** Universal Wheels
+
+Universal wheels are a special type of pure Python wheel compatible with both Python2
+and Python3. They use the "py2.py3-none-any" tag.
+
+** Setting Up Your Environment
+
+*** Required Tools
+
+Install these tools before starting:
+
+#+begin_src shell
+pip install --upgrade pip
+pip install build wheel setuptools twine pytest
+#+end_src
+
+*** Using python3-venv
+
+python3-venv - The built-in virtual environment module in Python 3 (successor to pyvenv).
+
+**** Installation
+
+#+begin_src shell-script
+# Debian/Ubuntu
+sudo apt install python3-venv
+
+# Fedora
+sudo dnf install python3-venv
+#+end_src
+
+**** Creating a Virtual Environment
+
+#+begin_src shell-script
+# Basic usage
+python3 -m venv myenv
+
+# With system-site-packages (gives access to system packages)
+python3 -m venv --system-site-packages myenv
+#+end_src
+
+**** Activating, Deactivate the Environment
+
+#+begin_src shell-script
+# On Linux/macOS
+source myenv/bin/activate
+
+# On Windows (cmd.exe)
+myenv\Scripts\activate.bat
+
+# On Windows (PowerShell)
+myenv\Scripts\Activate.ps1
+
+# Deactivate when done
+deactivate
+#+end_src
+
+**** Recommended Development Workflow
+
+Here's a streamlined workflow that will make package development much easier:
+
+#+begin_src bash
+# STEP 1: Create a virtual environment (only once)
+python -m venv myenv
+
+# STEP 2: Activate the environment
+source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+
+# STEP 3: Install development dependencies (only once)
+pip install build pytest coverage twine  # Basic tools
+# OR better yet:
+pip install -e ".[dev]"  # If you've set up the dev extras in pyproject.toml
+
+# STEP 4: Install your package in development mode (only once)
+pip install -e .
+
+# Now you can work on your code...
+
+# STEP 5: Run tests directly without building/installing
+pytest
+
+# STEP 6: When ready to build a distribution
+python -m build
+
+# STEP 7: If needed, test the built package
+pip install dist/hello-0.1.0-py3-none-any.whl --force-reinstall
+#+end_src
+
+***** Key Advantages of Development Mode
+
+The magic happens with `pip install -e .` (the `-e` stands for "editable"):
+
+- It installs your package in "development mode"
+- Your package becomes importable system-wide
+- Changes to your code are immediately available without reinstalling
+- You can run your CLI commands directly
+
+***** Best Practices and Tips
+
+- Don't add activation to your profile. This keeps environments isolated and intentional.
+- One environment per project, create separate environments for different projects to avoid
+  dependency conflicts.
+- Name environments meaningfully, use descriptive names or match the project name.
+- Environment location: Common practices:
+  - Inside project directory (e.g., myproject/venv/)
+  - Central location (e.g., ~/.virtualenvs/myproject/)
+- Use =python -m pip=. This ensures you're using the pip associated with the active environment.
+- Recreate instead of moving: Virtual environments contain absolute paths; recreate them rather
+  than moving them.
+- Requirements files: Use requirements.txt for deployment or requirements-dev.txt for
+  development dependencies.
+- Consider tools like direnv: For automatically activating environments when entering project
+  directories.
+
+** Recommended Layout
+
+#+begin_src text
+my-package/                  # Project root
+├── pyproject.toml           # Modern build configuration (preferred)
+├── setup.py                 # Legacy build configuration (if needed)
+├── setup.cfg                # Additional configuration (optional)
+├── README.md                # Project documentation
+├── LICENSE                  # License file
+├── src/                     # Source directory (recommended)
+│   └── my_package/          # Package directory
+│       ├── __init__.py      # Makes it a Python package
+│       ├── module.py        # Package code
+│       └── cli.py           # Command-line interface
+└── tests/                   # Test directory
+    └── test_module.py       # Test files
+#+end_src
+
+The main advantages of using the =src= directory:
+- Prevents accidental imports from the project root
+- Reduces confusion between installed and development code
+- Simplify testing
+
+*** Configuration Files
+
+**** Modern Approach: pyproject.toml (Recommended)
+
+#+begin_src toml
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "my-package"
+version = "1.0.0"
+description = "A sample Python package"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+# Define command-line scripts
+[project.scripts]
+my-command = "my_package.cli:main"  # Creates executable 'my-command'
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/my-package"
+"Bug Tracker" = "https://github.com/yourusername/my-package/issues"
+#+end_src
+
+**** Legacy Approach: setup.py
+
+#+begin_src python
+from setuptools import setup, find_packages
+
+setup(
+    name="my-package",
+    version="1.0.0",
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    python_requires=">=3.7",
+    entry_points={
+        "console_scripts": [
+            "my-command=my_package.cli:main",  # Creates executable 'my-command'
+        ],
+    },
+)
+#+end_src
+
+** Building Wheels
+
+*** Using build (Recommended)
+
+#+begin_src shell
+python -m build
+#+end_src
+
+This creates:
+- A wheel file in `dist/my_package-1.0.0-py3-none-any.whl`
+- A source distribution in `dist/my_package-1.0.0.tar.gz`
+
+*** Using setuptools directly (Legacy)
+
+#+begin_src shell
+python setup.py bdist_wheel
+#+end_src
+
+** Install and uninstall package
+
+*** Install and uninstall your package as system-wide CLI tool
+
+Use 'pipx' (an example of installation: sudo aptitude install pipx)
+
+#+begin_src shell-script
+# To install
+pipx install dist/hello-0.1.0-py3-none-any.whl
+# To uninstall
+pipx uninstall hello
+#+end_src
+
+*** Install and uninstall your package for an environment
+
+#+begin_src shell-script
+# Install packages within the environment
+pip install package-name
+# Install a builded package
+pip install .
+
+# Create requirements.txt
+pip freeze > requirements.txt
+
+# Install from requirements.txt
+pip install -r requirements.txt
+#+end_src
+
+#+begin_src shell-script
+# Install your package in development mode
+pip install -e .
+#+end_src
+
+** Troubleshooting Package
+
+Check the actual structure inside the wheel
+
+#+begin_src shell-script
+pip show -f greeting
+#+end_src
+
+* Examples
+
+** Example1, *'hellolib'* (package/library)
+
+A simple Python package for greeting messages.
+
+*** Project Structure
+
+#+begin_src text
+hellolib/
+├── Makefile
+├── pyproject.toml
+├── README.md
+├── src/
+│   └── hellolib/
+│       ├── __init__.py
+│       └── hello.py
+└── tests/
+    ├── __init__.py
+    └── test_hellolib.py
+#+end_src
+
+#+begin_src markdown :tangle hellolib/README.md :mkdirp yes
+# Hellolib
+
+A simple Python package for hellolib messages.
+
+## Usage
+
+```bash
+  # Create environment:
+   python -m venv myenv
+
+  # Building:
+  python -m build
+
+  # Activate environment
+  source myenv/bin/activate
+
+  # Install the package
+  pip install .
+
+  # Checking
+  python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+```
+#+end_src
+
+#+begin_src python :tangle hellolib/__init__.py :mkdirp yes
+"""Simple hellolib package."""
+
+# Import the function to make it available at package level
+from .hello import say_hello
+
+__version__ = "0.1.0"
+#+end_src
+
+#+begin_src toml :tangle hellolib/pyproject.toml :mkdirp yes
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hellolib"
+version = "0.1.0"
+description = "A simple hellolib package"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+#+end_src
+
+#+begin_src python :tangle hellolib/src/hellolib/hello.py :mkdirp yes
+"""Hellolib functions."""
+
+def say_hello(name="World"):
+    """Return a hellolib message.
+    Args:
+        name (str, optional): Name to greet. Defaults to "World".
+    Returns:
+        str: Hellolib message
+    """
+    return f"Hello, {name}!"
+
+def say_goodbye(name="World"):
+    """Return a goodbye message.
+    Args:
+        name (str, optional): Name to say goodbye to. Defaults to "World".
+    Returns:
+        str: Goodbye message
+    """
+    return f"Goodbye, {name}!"
+#+end_src
+
+#+begin_src python :tangle hellolib/tests/init.py :mkdirp yes
+# This file can be empty - it just indicates tests is a package
+#+end_src
+
+#+begin_src python :tangle hellolib/tests/test_hellolib.py :mkdirp yes
+"""Tests for the hellolib package."""
+
+import unittest
+from hellolib.hello import say_hello
+from hellolib.hello import say_goodbye
+
+class TestHellolib(unittest.TestCase):
+    """Test case for hellolib functions."""
+
+    def test_say_hello_default(self):
+        """Test say_hello with default arguments."""
+        self.assertEqual(say_hello(), "Hello, World!")
+
+    def test_say_hello_custom(self):
+        """Test say_hello with custom name."""
+        self.assertEqual(say_hello("Python"), "Hello, Python!")
+
+    def test_say_goodbye_default(self):
+        """Test say_goodbye with default arguments."""
+        self.assertEqual(say_goodbye(), "Goodbye, World!")
+
+    def test_say_goodbye_custom(self):
+        """Test say_goodbye with custom name."""
+        self.assertEqual(say_goodbye("Python"), "Goodbye, Python!")
+
+if __name__ == "__main__":
+    unittest.main()
+#+end_src
+
+#+begin_src python :tangle hellolib/use_hellolib_example.py :mkdirp yes
+#!/usr/bin/env python3
+
+from hellolib.hello import say_hello;
+
+# Default hellolib
+print(say_hello());  # Outputs: Hello, World!
+
+# Custom hellolib
+print(say_hello("Python"));  # Outputs: Hello, Python!
+
+# For goodbye messages
+from hellolib.hello import say_goodbye
+print(say_goodbye("Friend"));  # Outputs: Goodbye, Friend!
+#+end_src
+
+*** Building and use
+
+See [[file:hellolib/README.md]]
+
+Or run example:
+
+#+begin_src shell-script
+python ./use_hellolib_example.py
+#+end_src
+
+Expected output:
+
+#+begin_src text
+# The script output:
+# Hello, World!
+# Hello, Python!
+# Goodbye, Friend!
+#+end_src
+
+** Example2, *'hello'* (CLI application)
+
+A Python CLI package for various greeting commands.
+
+*** Project Structure
+
+#+begin_src text
+hello/
+├── pyproject.toml
+├── README.md
+├── src/
+│   └── hello/
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── handlers/
+│       │   ├── __init__.py
+│       │   ├── hi_handler.py
+│       │   ├── bay_handler.py
+│       │   └── default_handler.py
+└── tests/
+    ├── __init__.py
+    └── test_hello.py
+#+end_src
+
+#+begin_src markdown :tangle hello/README.md :mkdirp yes
+# Hello
+
+A simple Python CLI package for greeting commands.
+
+## Installation (system-wide)
+
+```bash
+pipx install hello
+```
+
+## Usage
+
+After installation, you can use the package from the command line:
+
+```bash
+hello hi         # Outputs: Hello
+hello bay        # Outputs: Good-bay
+hello anything   # Outputs: Have a nice day
+hello --help     # Shows help information
+```
+
+## Development
+
+```bash
+# Create environment:
+python -m venv myenv
+
+# Activate environment
+source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+
+# Building:
+python -m build
+
+# Install the package in development mode
+pip install -e .
+
+# Running tests
+python -m unittest discover
+```
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/__init__.py :mkdirp yes
+"""Hello CLI application package."""
+
+__version__ = "0.1.0"
+#+end_src
+
+#+begin_src toml :tangle hello/pyproject.toml :mkdirp yes
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hello"
+version = "0.1.0"
+description = "A CLI greeting application"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+]
+
+[project.scripts]
+hello = "hello.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["hello", "hello.handlers"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/cli.py :mkdirp yes
+"""Command-line interface for the hello package."""
+
+import sys
+import argparse
+from hello.handlers.hi_handler import handle_hi
+from hello.handlers.bay_handler import handle_bay
+from hello.handlers.default_handler import handle_default
+
+def main():
+    """Execute the CLI application.
+
+    Parses command line arguments and calls the appropriate handler.
+    """
+    parser = argparse.ArgumentParser(description='CLI greeting application')
+    parser.add_argument('command', nargs='?', default='default',
+                        help='Command to execute (hi, bay, or any other text)')
+
+    args = parser.parse_args()
+
+    # Map commands to their handlers
+    handlers = {
+        'hi': handle_hi,
+        'bay': handle_bay,
+    }
+
+    # Get the appropriate handler or use the default
+    handler = handlers.get(args.command, handle_default)
+
+    # Execute the handler
+    print(handler())
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/handlers/__init__.py :mkdirp yes
+"""Handler modules for the hello package."""
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/handlers/hi_handler.py :mkdirp yes
+"""Handler for the 'hi' command."""
+
+def handle_hi():
+    """Return the 'Hello' greeting.
+
+    Returns:
+        str: The greeting message
+    """
+    return "Hello"
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/handlers/bay_handler.py :mkdirp yes
+"""Handler for the 'bay' command."""
+
+def handle_bay():
+    """Return the 'Good-bay' message.
+
+    Returns:
+        str: The farewell message
+    """
+    return "Good-bay"
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/handlers/default_handler.py :mkdirp yes
+"""Default handler for unrecognized commands."""
+
+def handle_default():
+    """Return the default message.
+
+    Returns:
+        str: The default friendly message
+    """
+    return "Have a nice day"
+#+end_src
+
+#+begin_src python :tangle hello/tests/__init__.py :mkdirp yes
+# This file can be empty - it just indicates tests is a package
+#+end_src
+
+#+begin_src python :tangle hello/tests/test_hello.py :mkdirp yes
+"""Tests for the hello package."""
+
+import unittest
+import io
+import sys
+from unittest.mock import patch
+from hello.cli import main
+from hello.handlers.hi_handler import handle_hi
+from hello.handlers.bay_handler import handle_bay
+from hello.handlers.default_handler import handle_default
+
+class TestHandlers(unittest.TestCase):
+    """Test case for handler functions."""
+
+    def test_handle_hi(self):
+        """Test the hi handler."""
+        self.assertEqual(handle_hi(), "Hello")
+
+    def test_handle_bay(self):
+        """Test the bay handler."""
+        self.assertEqual(handle_bay(), "Good-bay")
+
+    def test_handle_default(self):
+        """Test the default handler."""
+        self.assertEqual(handle_default(), "Have a nice day")
+
+class TestCLI(unittest.TestCase):
+    """Test case for CLI functionality."""
+
+    @patch('sys.argv', ['hello', 'hi'])
+    def test_cli_hi(self):
+        """Test CLI with 'hi' command."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        main()
+        sys.stdout = sys.__stdout__
+        self.assertEqual(captured_output.getvalue().strip(), "Hello")
+
+    @patch('sys.argv', ['hello', 'bay'])
+    def test_cli_bay(self):
+        """Test CLI with 'bay' command."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        main()
+        sys.stdout = sys.__stdout__
+        self.assertEqual(captured_output.getvalue().strip(), "Good-bay")
+
+    @patch('sys.argv', ['hello', 'unknown'])
+    def test_cli_default(self):
+        """Test CLI with an unknown command."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        main()
+        sys.stdout = sys.__stdout__
+        self.assertEqual(captured_output.getvalue().strip(), "Have a nice day")
+
+if __name__ == "__main__":
+    unittest.main()
+#+end_src
