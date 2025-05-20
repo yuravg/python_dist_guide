@@ -2,7 +2,7 @@
 
 A simple Python package for hellolib messages.
 
-## Use
+## Usage
 
 ```bash
   # Create environment:
