@@ -1,9 +1,9 @@
-"""Hello CLI application package."""
+"""Simple hellolib package."""
 
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("hello")
+    __version__ = version("hellolib")
 except PackageNotFoundError:
     __version__ = "unknown"
 

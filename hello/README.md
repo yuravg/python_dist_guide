@@ -23,17 +23,21 @@ hello --help     # Shows help information
 
 ```bash
 # Create environment:
-python -m venv .venv
+python -m venv .venv       # Or: python3 -m venv .venv
 
 # Activate environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Building:
-python -m build
-
 # Install the package in development mode
 pip install -e .
 
+# Install Development Dependencies
+python -m pip install --upgrade pip
+pip install build pytest pytest-cov
+
 # Running tests
-python -m unittest discover
+python -m unittest discover  # Or: pytes
+
+# Building:
+python -m build
 ```

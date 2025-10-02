@@ -4,6 +4,8 @@ import unittest
 from hellolib.hello import say_hello
 from hellolib.hello import say_goodbye
 
+"""Tests for the hellolib package."""
+
 class TestHellolib(unittest.TestCase):
     """Test case for hellolib functions."""
 

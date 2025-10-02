@@ -102,13 +102,17 @@ and Python3. They use the "py2.py3-none-any" tag.
 
 ** Setting Up Your Environment
 
+#+begin_quote
+Instead of calling =python=, you may need to call =python3=
+#+end_quote
+
 *** Required Tools
 
 Install these tools before starting:
 
 #+begin_src shell
 python -m pip install --upgrade pip
-pip install build wheel setuptools twine pytest
+pip install build wheel setuptools pytest requests
 #+end_src
 
 *** Using python3-venv
@@ -129,10 +133,10 @@ sudo dnf install python3-venv
 
 #+begin_src shell-script
 # Basic usage (.venv - This is the standard convention for naming Virtual Environments)
-python3 -m venv .venv
+python -m venv .venv
 
 # With system-site-packages (gives access to system packages)
-python3 -m venv --system-site-packages .venv
+python -m venv --system-site-packages .venv
 #+end_src
 
 **** Activating, Deactivate the Environment
@@ -164,7 +168,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # STEP 3: Install Development Dependencies (one-time setup)
 python -m pip install --upgrade pip
-pip install build pytest pytest-cov twine
+pip install build pytest pytest-cov requests
 # OR better yet:
 pip install -e ".[dev]"  # If you've set up the dev extras in pyproject.toml
 
@@ -187,7 +191,7 @@ rm -rf build/ dist/ *.egg-info
 python -m build
 
 # STEP 7: If needed, test the built package
-pip install dist/hello-0.1.0-py3-none-any.whl --force-reinstall
+pip install dist/package_name-0.1.0-py3-none-any.whl --force-reinstall
 #+end_src
 
 **** Develop and Test
@@ -208,7 +212,6 @@ pytest -v
 # Run tests and stop at first failure
 pytest -x
 #+end_src
-
 
 **** Test the Built Package (optional)
 
@@ -241,9 +244,6 @@ find . -type f -name "*.pyc" -delete
 
 # Checking Installed Package (to see installed version and location)
 pip show your_package_name
-
-# Creating a Clean Requirements File
-bashpip freeze > requirements.txt  # Captures all dependencies with versions
 #+end_src
 
 ***** Key Advantages of Development Mode
@@ -254,23 +254,6 @@ The magic happens with `pip install -e .` (the `-e` stands for "editable"):
 - Your package becomes importable system-wide
 - Changes to your code are immediately available without reinstalling
 - You can run your CLI commands directly
-
-***** Best Practices and Tips
-
-- Don't add activation to your profile. This keeps environments isolated and intentional.
-- One environment per project, create separate environments for different projects to avoid
-  dependency conflicts.
-- Name environments meaningfully, use descriptive names or match the project name.
-- Environment location: Common practices:
-  - Inside project directory (e.g., myproject/.venv/)
-  - Central location (e.g., ~/.virtualenvs/myproject/)
-- Use =python -m pip=. This ensures you're using the pip associated with the active environment.
-- Recreate instead of moving: Virtual environments contain absolute paths; recreate them rather
-  than moving them.
-- Requirements files: Use requirements.txt for deployment or requirements-dev.txt for
-  development dependencies.
-- Consider tools like direnv: For automatically activating environments when entering project
-  directories.
 
 ** Recommended Layout
 
@@ -371,9 +354,9 @@ Use 'pipx' (an example of installation: sudo aptitude install pipx)
 
 #+begin_src shell-script
 # To install
-pipx install dist/hello-0.1.0-py3-none-any.whl
+pipx install dist/package_name-0.1.0-py3-none-any.whl
 # To uninstall
-pipx uninstall hello
+pipx uninstall package_name
 #+end_src
 
 *** Install and uninstall your package for an environment
@@ -423,8 +406,11 @@ hellolib/
 │       └── hello.py
 └── tests/
     ├── __init__.py
+    ├── test_version.py
     └── test_hellolib.py
 #+end_src
+
+*** Source code
 
 #+begin_src markdown :tangle hellolib/README.md :mkdirp yes
 # Hellolib
@@ -434,30 +420,31 @@ A simple Python package for hellolib messages.
 ## Usage
 
 ```bash
-  # Create environment:
-   python -m venv .venv
+# Create environment:
+python -m venv .venv       # Or: python3 -m venv .venv
 
-  # Building:
-  python -m build
+# Activate environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-  # Activate environment
-  source .venv/bin/activate
+# Install the package in development mode
+pip install -e .
 
-  # Install the package
-  pip install .
+# Install Development Dependencies
+python -m pip install --upgrade pip
+pip install build pytest pytest-cov
 
-  # Checking
-  python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+# Running tests
+pytes
+
+# Building:
+python -m build
+
+# Checking (without installation)
+python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+
+# Installation
+pip install ./dist/hellolib-0.1.0-py3-none-any.whl
 ```
-#+end_src
-
-#+begin_src python :tangle hellolib/__init__.py :mkdirp yes
-"""Simple hellolib package."""
-
-# Import the function to make it available at package level
-from .hello import say_hello
-
-__version__ = "0.1.0"
 #+end_src
 
 #+begin_src toml :tangle hellolib/pyproject.toml :mkdirp yes
@@ -467,7 +454,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hellolib"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simple hellolib package"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
@@ -476,7 +463,27 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 #+end_src
+
+#+begin_src python :tangle hellolib/src/hellolib/__init__.py :mkdirp yes
+"""Simple hellolib package."""
+
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("hellolib")
+except PackageNotFoundError:
+    __version__ = "unknown"
+
+# Define public interface
+__all__ = ["__version__"]
+#+end_src
+
+#+RESULTS:
+: None
 
 #+begin_src python :tangle hellolib/src/hellolib/hello.py :mkdirp yes
 """Hellolib functions."""
@@ -511,6 +518,8 @@ import unittest
 from hellolib.hello import say_hello
 from hellolib.hello import say_goodbye
 
+"""Tests for the hellolib package."""
+
 class TestHellolib(unittest.TestCase):
     """Test case for hellolib functions."""
 
@@ -532,6 +541,25 @@ class TestHellolib(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+#+end_src
+
+#+begin_src python :tangle hellolib/tests/test_version.py :mkdirp yes
+"""Test version information."""
+
+from hellolib import __version__
+
+def test_version_exists():
+    """Test that version is defined."""
+    assert __version__ is not None
+    assert isinstance(__version__, str)
+    assert __version__ != "unknown"
+
+
+def test_version_format():
+    """Test version follows semantic versioning."""
+    parts = __version__.split(".")
+    assert len(parts) >= 2, "Version should have at least major.minor"
+    assert all(part.isdigit() for part in parts), "Version parts should be numeric"
 #+end_src
 
 #+begin_src python :tangle hellolib/use_hellolib_example.py :mkdirp yes
@@ -563,7 +591,6 @@ python ./use_hellolib_example.py
 Expected output:
 
 #+begin_src text
-# The script output:
 # Hello, World!
 # Hello, Python!
 # Goodbye, Friend!
@@ -590,8 +617,11 @@ hello/
 │       │   └── default_handler.py
 └── tests/
     ├── __init__.py
+    ├── test_version.py
     └── test_hello.py
 #+end_src
+
+***  Source code
 
 #+begin_src markdown :tangle hello/README.md :mkdirp yes
 # Hello
@@ -619,26 +649,24 @@ hello --help     # Shows help information
 
 ```bash
 # Create environment:
-python -m venv .venv
+python -m venv .venv       # Or: python3 -m venv .venv
 
 # Activate environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Building:
-python -m build
-
 # Install the package in development mode
 pip install -e .
 
+# Install Development Dependencies
+python -m pip install --upgrade pip
+pip install build pytest pytest-cov
+
 # Running tests
-python -m unittest discover
+python -m unittest discover  # Or: pytes
+
+# Building:
+python -m build
 ```
-#+end_src
-
-#+begin_src python :tangle hello/src/hello/__init__.py :mkdirp yes
-"""Hello CLI application package."""
-
-__version__ = "0.1.0"
 #+end_src
 
 #+begin_src toml :tangle hello/pyproject.toml :mkdirp yes
@@ -648,11 +676,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hello"
-version = "0.1.0"
+version = "1.0.0"
 description = "A CLI greeting application"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
 readme = "README.md"
 requires-python = ">=3.7"
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Environment :: Console",
@@ -670,6 +701,20 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 #+end_src
 
+#+begin_src python :tangle hello/src/hello/__init__.py :mkdirp yes
+"""Hello CLI application package."""
+
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("hello")
+except PackageNotFoundError:
+    __version__ = "unknown"
+
+# Define public interface
+__all__ = ["__version__"]
+#+end_src
+
 #+begin_src python :tangle hello/src/hello/cli.py :mkdirp yes
 """Command-line interface for the hello package."""
 
@@ -678,16 +723,48 @@ import argparse
 from hello.handlers.hi_handler import handle_hi
 from hello.handlers.bay_handler import handle_bay
 from hello.handlers.default_handler import handle_default
+from hello import __version__
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create and configure argument parser.
+
+    Returns:
+        Configured ArgumentParser instance
+    """
+    parser = argparse.ArgumentParser(
+        prog="hello",
+        description="A simple greeting CLI application",
+        epilog="Examples:\n"
+               "  hello              # Greet the world\n"
+               "  hello Python       # Greet Python\n"
+               "  hello --version    # Show version",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=f"%(prog)s v{__version__}",
+        help="Show program version and exit"
+    )
+
+    parser.add_argument(
+        'command', nargs='?', default='default',
+        help='Command to execute (hi, bay, or any other text)'
+    )
+    return parser
+
 
 def main():
-    """Execute the CLI application.
+    """Main entry point for CLI.
 
-    Parses command line arguments and calls the appropriate handler.
+    Returns:
+        Exit code (0 for success, non-zero for error)
     """
-    parser = argparse.ArgumentParser(description='CLI greeting application')
-    parser.add_argument('command', nargs='?', default='default',
-                        help='Command to execute (hi, bay, or any other text)')
 
+    parser = create_parser()
     args = parser.parse_args()
 
     # Map commands to their handlers
@@ -696,13 +773,15 @@ def main():
         'bay': handle_bay,
     }
 
-    # Get the appropriate handler or use the default
-    handler = handlers.get(args.command, handle_default)
-
-    # Execute the handler
-    print(handler())
-
-    return 0
+    try:
+        # Get the appropriate handler or use the default
+        handler = handlers.get(args.command, handle_default)
+        # Execute the handler
+        print(handler())
+        return 0
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())
@@ -812,3 +891,78 @@ class TestCLI(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 #+end_src
+
+#+begin_src python :tangle hello/tests/test_version.py :mkdirp yes
+"""Test version information."""
+
+import subprocess
+import sys
+from hello import __version__
+
+
+def test_version_exists():
+    """Test that version can be imported."""
+    assert __version__ is not None
+    assert isinstance(__version__, str)
+    assert __version__ != "unknown"
+
+
+def test_version_format():
+    """Test version follows semantic versioning."""
+    parts = __version__.split(".")
+    assert len(parts) >= 2, "Version should have at least major.minor"
+    assert all(part.isdigit() for part in parts), "Version parts should be numeric"
+
+
+def test_cli_version_flag():
+    """Test that CLI --version flag works."""
+    result = subprocess.run(
+        ["hello", "--version"],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    # Check command succeeded
+    assert result.returncode == 0, f"CLI failed with: {result.stderr}"
+
+    # Check output contains version
+    output = result.stdout.strip()
+    assert "hello" in output.lower(), f"Expected 'hello' in output: {output}"
+    assert __version__ in output, f"Expected version {__version__} in output: {output}"
+
+
+def test_cli_version_shorthand():
+    """Test that CLI -v flag works."""
+    result = subprocess.run(
+        ["hello", "-v"],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    # Check command succeeded
+    assert result.returncode == 0, f"CLI failed with: {result.stderr}"
+
+    # Check output contains version
+    output = result.stdout.strip()
+    assert __version__ in output, f"Expected version {__version__} in output: {output}"
+
+
+def test_cli_module_version():
+    """Test running CLI as module with --version."""
+    result = subprocess.run(
+        [sys.executable, "-m", "hello.cli", "--version"],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    assert result.returncode == 0, f"CLI module failed with: {result.stderr}"
+    output = result.stdout.strip()
+    assert __version__ in output, f"Expected version {__version__} in output: {output}"
+#+end_src
+
+*** Building and use
+
+See [[file:hello/README.md]]

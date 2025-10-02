@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hellolib"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simple hellolib package"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
@@ -13,3 +13,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

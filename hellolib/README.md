@@ -5,18 +5,28 @@ A simple Python package for hellolib messages.
 ## Usage
 
 ```bash
-  # Create environment:
-   python -m venv .venv
+# Create environment:
+python -m venv .venv       # Or: python3 -m venv .venv
 
-  # Building:
-  python -m build
+# Activate environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-  # Activate environment
-  source .venv/bin/activate
+# Install the package in development mode
+pip install -e .
 
-  # Install the package
-  pip install .
+# Install Development Dependencies
+python -m pip install --upgrade pip
+pip install build pytest pytest-cov
 
-  # Checking
-  python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+# Running tests
+pytes
+
+# Building:
+python -m build
+
+# Checking (without installation)
+python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+
+# Installation
+pip install ./dist/hellolib-0.1.0-py3-none-any.whl
 ```
