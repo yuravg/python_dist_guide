@@ -6,13 +6,13 @@ A simple Python package for hellolib messages.
 
 ```bash
   # Create environment:
-   python -m venv myenv
+   python -m venv .venv
 
   # Building:
   python -m build
 
   # Activate environment
-  source myenv/bin/activate
+  source .venv/bin/activate
 
   # Install the package
   pip install .

@@ -23,10 +23,10 @@ hello --help     # Shows help information
 
 ```bash
 # Create environment:
-python -m venv myenv
+python -m venv .venv
 
 # Activate environment
-source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Building:
 python -m build

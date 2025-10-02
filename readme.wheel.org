@@ -107,7 +107,7 @@ and Python3. They use the "py2.py3-none-any" tag.
 Install these tools before starting:
 
 #+begin_src shell
-pip install --upgrade pip
+python -m pip install --upgrade pip
 pip install build wheel setuptools twine pytest
 #+end_src
 
@@ -128,24 +128,24 @@ sudo dnf install python3-venv
 **** Creating a Virtual Environment
 
 #+begin_src shell-script
-# Basic usage
-python3 -m venv myenv
+# Basic usage (.venv - This is the standard convention for naming Virtual Environments)
+python3 -m venv .venv
 
 # With system-site-packages (gives access to system packages)
-python3 -m venv --system-site-packages myenv
+python3 -m venv --system-site-packages .venv
 #+end_src
 
 **** Activating, Deactivate the Environment
 
 #+begin_src shell-script
 # On Linux/macOS
-source myenv/bin/activate
+source .venv/bin/activate
 
 # On Windows (cmd.exe)
-myenv\Scripts\activate.bat
+.venv\Scripts\activate.bat
 
 # On Windows (PowerShell)
-myenv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1
 
 # Deactivate when done
 deactivate
@@ -155,31 +155,95 @@ deactivate
 
 Here's a streamlined workflow that will make package development much easier:
 
-#+begin_src bash
-# STEP 1: Create a virtual environment (only once)
-python -m venv myenv
+#+begin_src shell-script
+# STEP 1: Create a Virtual Environment (one-time setup)
+python -m venv .venv
 
-# STEP 2: Activate the environment
-source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+# STEP 2: Activate the Virtual Environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# STEP 3: Install development dependencies (only once)
-pip install build pytest coverage twine  # Basic tools
+# STEP 3: Install Development Dependencies (one-time setup)
+python -m pip install --upgrade pip
+pip install build pytest pytest-cov twine
 # OR better yet:
 pip install -e ".[dev]"  # If you've set up the dev extras in pyproject.toml
 
-# STEP 4: Install your package in development mode (only once)
+# STEP 4: Install Your Package in Editable Mode (one-time setup)
+# The -e (editable) flag creates a symlink to your source code instead of copying it
+# If you modify dependencies in pyproject.toml, run this command again
 pip install -e .
+# Or (when you need to release a new version)
+pip install -e . --force-reinstall
 
 # Now you can work on your code...
 
 # STEP 5: Run tests directly without building/installing
 pytest
 
-# STEP 6: When ready to build a distribution
+# STEP 6: Build Distribution Packages
+# Clean Build Artifacts (before building)
+rm -rf build/ dist/ *.egg-info
+# Build
 python -m build
 
 # STEP 7: If needed, test the built package
 pip install dist/hello-0.1.0-py3-none-any.whl --force-reinstall
+#+end_src
+
+**** Develop and Test
+
+#+begin_src shell-script
+# Run all tests
+pytest
+
+# Run tests with coverage report
+pytest --cov=your_package_name --cov-report=html
+
+# Run specific test file
+pytest tests/test_module.py
+
+# Run tests in verbose mode
+pytest -v
+
+# Run tests and stop at first failure
+pytest -x
+#+end_src
+
+
+**** Test the Built Package (optional)
+
+#+begin_src shell-script
+# Create a temporary test environment
+python -m venv test_env
+source test_env/bin/activate  # or test_env\Scripts\activate on Windows
+
+# Install the wheel
+pip install dist/your_package-0.1.0-py3-none-any.whl
+
+# Test that it works
+python -c "import your_package; print(your_package.__version__)"
+
+# Deactivate and remove test environment
+deactivate
+rm -rf test_env
+#+end_src
+
+**** Additional Useful Commands
+
+#+begin_src shell-script
+# Version Bumping. Update version in pyproject.toml or __init__.py, then:
+pip install -e .  # Refresh the editable install
+
+# Complete Clean. Remove all generated and cached files
+rm -rf build/ dist/ *.egg-info __pycache__/ .pytest_cache/ .coverage htmlcov/
+find . -type d -name "__pycache__" -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+
+# Checking Installed Package (to see installed version and location)
+pip show your_package_name
+
+# Creating a Clean Requirements File
+bashpip freeze > requirements.txt  # Captures all dependencies with versions
 #+end_src
 
 ***** Key Advantages of Development Mode
@@ -198,7 +262,7 @@ The magic happens with `pip install -e .` (the `-e` stands for "editable"):
   dependency conflicts.
 - Name environments meaningfully, use descriptive names or match the project name.
 - Environment location: Common practices:
-  - Inside project directory (e.g., myproject/venv/)
+  - Inside project directory (e.g., myproject/.venv/)
   - Central location (e.g., ~/.virtualenvs/myproject/)
 - Use =python -m pip=. This ensures you're using the pip associated with the active environment.
 - Recreate instead of moving: Virtual environments contain absolute paths; recreate them rather
@@ -371,13 +435,13 @@ A simple Python package for hellolib messages.
 
 ```bash
   # Create environment:
-   python -m venv myenv
+   python -m venv .venv
 
   # Building:
   python -m build
 
   # Activate environment
-  source myenv/bin/activate
+  source .venv/bin/activate
 
   # Install the package
   pip install .
@@ -555,10 +619,10 @@ hello --help     # Shows help information
 
 ```bash
 # Create environment:
-python -m venv myenv
+python -m venv .venv
 
 # Activate environment
-source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Building:
 python -m build
