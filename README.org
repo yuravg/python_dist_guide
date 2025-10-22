@@ -1,4 +1,4 @@
-#+TITLE: Python Distributions Guide
+#+TITLE: Python Package Distribution Guide
 #+AUTHOR: Yuriy Gritsenko
 #+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
 
@@ -6,22 +6,29 @@
 A brief guides to creating Python distributions.
 #+end_quote
 
-*Core Terminology*
 
-- *Package*: a directory containing Python modules (.py files) and an __init__.py file, which
+* Core Concepts
+
+** Terminology
+
+- *Package*: A directory containing Python modules (.py files) and an =__init__.py= file, which
   designates it as a Python package. Packages can include sub-packages, forming a hierarchical
-  structure. Naming convention: use lowercase letters my_package, not MyPackage or my-package).
-- *Module*: a single Python file (.py) that contains functions, classes, variables, or other
+  structure. Naming convention: use lowercase letters (=my_package=, not =MyPackage= or =my-package=).
+
+- *Module*: A single Python file (.py) that contains functions, classes, variables, or other
   definitions. Modules are parts of packages and libraries.
-- *Library*: a collection of packages and/or modules designed to be imported and reused. Libraries
-  provide reusable functionality, such as utilities or tools, to other codebases (for naming use
-  suffix: utils, lib, or tools).
-- *Application*: a Python project that's meant to be used as a standalone program. It might
+
+- *Library*: A collection of packages and/or modules designed to be imported and reused. Libraries
+  provide reusable functionality, such as utilities or tools, to other codebases. For naming,
+  use suffixes like =utils=, =lib=, or =tools=.
+
+- *Application*: A Python project that's meant to be used as a standalone program. It might
   include a command-line interface (CLI) or graphical user interface (GUI), or other entry
   points for user interaction.
-- *Distribution*: a packaged version of a Python project (package, library, or application) that
-  can be shared, installed. Distributions are typically created using tools like setuptools or
-  poetry and include metadata.
+
+- *Distribution*: A packaged version of a Python project (package, library, or application) that
+  can be shared and installed. Distributions are typically created using tools like setuptools
+  or poetry and include metadata.
 
 * Guides:
 
