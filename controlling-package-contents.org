@@ -1,0 +1,140 @@
+#+TITLE: Python Package Development - Controlling Package Contents
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+* Contents                                                         :noexport:
+:PROPERTIES:
+:TOC:       :include all :depth 2
+:END:
+
+:CONTENTS:
+- [[#controlling-package-contents][Controlling Package Contents]]
+  - [[#what-gets-included-by-default][What Gets Included by Default]]
+  - [[#including-package-data-files][Including Package Data Files]]
+  - [[#including-data-files-outside-packages][Including Data Files Outside Packages]]
+  - [[#excluding-files-rarely-needed][Excluding Files (Rarely Needed)]]
+  - [[#verifying-package-contents][Verifying Package Contents]]
+  - [[#common-scenarios][Common Scenarios]]
+  - [[#manifestin-legacy---usually-not-needed][MANIFEST.in (Legacy - Usually Not Needed)]]
+:END:
+
+
+* Controlling Package Contents
+
+** What Gets Included by Default
+
+When using =python -m build=, the following are automatically included:
+
+- *Python files:* All =.py= files in packages found by setuptools
+- *Package metadata:* =README.md=, =LICENSE= (as specified in =pyproject.toml=)
+- *Package data:* Only if explicitly configured (see below)
+
+*Not included by default:*
+- Tests directory (good!)
+- Documentation files
+- Configuration files (=.env=, etc.)
+- Data files in packages
+
+** Including Package Data Files
+
+To include non-Python files (templates, configs, data) in your package:
+
+#+begin_src toml
+[tool.setuptools.package-data]
+# Include specific file patterns in your package
+my_package = [
+    "*.txt",              # All .txt files in my_package/
+    "data/*.json",        # JSON files in my_package/data/
+    "templates/*.html",   # HTML templates
+    "static/**/*",        # Everything in static/ (recursive)
+]
+
+# For multiple packages
+[tool.setuptools.package-data]
+my_package = ["*.txt", "data/*.json"]
+my_package.submodule = ["*.yaml"]
+#+end_src
+
+** Including Data Files Outside Packages
+
+For data files that should be installed outside your package directory:
+
+#+begin_src toml
+[tool.setuptools.data-files]
+# Format: destination = [source_files]
+"share/my_package" = ["data/*.conf", "data/*.ini"]
+"etc/my_package" = ["config/default.cfg"]
+#+end_src
+
+*Note:* This approach is less common. Usually better to keep data inside your package.
+
+** Excluding Files (Rarely Needed)
+
+With =src= layout, you rarely need to exclude files. But if needed:
+
+#+begin_src toml
+[tool.setuptools]
+# Exclude specific patterns from all packages
+exclude-package-data = {
+    "*" = ["*.c", "*.h", "*.so"],  # Exclude C source/compiled files
+}
+#+end_src
+
+** Verifying Package Contents
+
+Always check what ended up in your distribution:
+
+#+begin_src shell
+# Build the wheel
+python -m build
+
+# List contents of wheel
+unzip -l dist/my_package-1.0.0-py3-none-any.whl
+
+# Or extract and inspect
+unzip dist/my_package-1.0.0-py3-none-any.whl -d /tmp/inspect
+tree /tmp/inspect
+#+end_src
+
+** Common Scenarios
+
+*** Including a single data file:
+
+#+begin_src toml
+[tool.setuptools.package-data]
+my_package = ["data.json"]
+#+end_src
+
+Access in code:
+#+begin_src python
+from importlib.resources import files
+data_file = files('my_package') / 'data.json'
+text = data_file.read_text()
+#+end_src
+
+*** Including an entire directory:
+
+#+begin_src toml
+[tool.setuptools.package-data]
+my_package = ["templates/**/*"]  # Everything in templates/ recursively
+#+end_src
+
+*** Including multiple file types:
+
+#+begin_src toml
+[tool.setuptools.package-data]
+my_package = [
+    "*.txt",
+    "*.md",
+    "*.json",
+    "*.yaml",
+    "*.yml",
+]
+#+end_src
+
+** MANIFEST.in (Legacy - Usually Not Needed)
+
+With =pyproject.toml=, you rarely need =MANIFEST.in=. It's only needed for:
+- Including files in source distribution (=.tar.gz=) but not in wheel
+- Legacy compatibility with old build systems
+
+Modern approach: Configure everything in =pyproject.toml=

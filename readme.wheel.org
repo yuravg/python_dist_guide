@@ -13,69 +13,38 @@ A brief guide to creating wheeled Python distributions.
 
 :CONTENTS:
 - [[#overview][Overview]]
-  - [[#distribution-formats][Distribution Formats]]
+  - [[#what-are-wheels-and-why-use-them][What Are Wheels and Why Use Them]]
   - [[#wheel-types][Wheel Types]]
   - [[#setting-up-your-environment][Setting Up Your Environment]]
   - [[#recommended-layout][Recommended Layout]]
+  - [[#version-management-strategy][Version Management Strategy]]
+  - [[#controlling-package-contents][Controlling Package Contents]]
   - [[#building-wheels][Building Wheels]]
   - [[#install-and-uninstall-package][Install and uninstall package]]
-  - [[#troubleshooting-package][Troubleshooting Package]]
+  - [[#advanced-topics][Advanced Topics]]
+  - [[#troubleshooting-guide][Troubleshooting Guide]]
 - [[#examples][Examples]]
   - [[#example1-hellolib-packagelibrary][Example1, 'hellolib' (package/library)]]
   - [[#example2-hello-cli-application][Example2, 'hello' (CLI application)]]
+- [[#command-reference-card][Command Reference Card]]
 :END:
 
 * Overview
 
-Python wheel is a relatively new standard for Python binary package distribution, replacing
-the older egg format. Wheels offer faster installation, improved security, and better
-consistency across platforms.
+** What Are Wheels and Why Use Them
 
-** Distribution Formats
+Python wheel is a modern standard for Python binary package distribution, replacing
+the older egg format.
 
-*** Source Distribution (sdist)
+*** Key Advantages
 
-A source distribution is a .tar.gz archive containing your project's source code plus metadata.
+- *Faster Installation:* Pre-built packages install immediately without compilation
+- *Improved Security:* Digital signatures and hash verification
+- *Better Consistency:* Same binary works across compatible platforms
+- *No Build Tools Required:* End users don't need compilers or build dependencies
+- *Smaller Size:* Excludes tests and documentation, reducing download size
 
-#+begin_src text
-my-package-1.0.0.tar.gz
-├── my_package/
-│   ├── __init__.py
-│   └── module.py
-├── setup.py or pyproject.toml
-├── README.md
-├── LICENSE
-└── PKG-INFO
-#+end_src
-
-Key characteristics:
-- Platform-independent
-- Requires a build step during installation
-- Contains source code only (not compiled code)
-- Often includes documentation and tests
-
-*** Wheel Distribution (bdist_wheel)
-
-A wheel is a .whl file (ZIP-format archive) containing pre-built files ready for installation.
-
-#+begin_src text
-my_package-1.0.0-py3-none-any.whl
-├── my_package/
-│   ├── __init__.py
-│   └── module.py
-└── my_package-1.0.0.dist-info/
-    ├── METADATA
-    ├── RECORD
-    ├── WHEEL
-    └── top_level.txt
-#+end_src
-
-Key characteristics:
-- Pre-built, ready for immediate installation
-- No compilation required during installation
-- Faster installation than sdists
-- Doesn't include tests or documentation
-- Platform-specific when including compiled extensions
+[[file:distribution-formats.org][Distribution formats]]
 
 ** Wheel Types
 
@@ -84,10 +53,18 @@ Key characteristics:
 Pure Python wheels contain only Python code (no compiled extensions). They use the
 "py3-none-any" tag indicating compatibility with any platform.
 
+*Filename format:* ={name}-{version}-py3-none-any.whl=
+
+Example: =mypackage-1.0.0-py3-none-any.whl=
+
 *** Platform Wheels
 
 Platform wheels contain compiled extensions and are specific to an operating system,
-architecture, and sometimes Python implementation. Examples:
+architecture, and sometimes Python implementation.
+
+*Filename format:* ={name}-{version}-{python}-{abi}-{platform}.whl=
+
+Examples:
 
 #+begin_src text
 my_package-1.0.0-cp39-cp39-win_amd64.whl             # Windows 64-bit, Python 3.9
@@ -95,10 +72,17 @@ my_package-1.0.0-cp39-cp39-macosx_10_9_x86_64.whl    # macOS, Python 3.9
 my_package-1.0.0-cp39-cp39-manylinux_2_17_x86_64.whl # Linux, Python 3.9
 #+end_src
 
-*** Universal Wheels
+Where:
+- =cp39= means CPython 3.9
+- =cp39= (second) is the ABI tag
+- =win_amd64=, =macosx_10_9_x86_64=, =manylinux_2_17_x86_64= are platform tags
 
-Universal wheels are a special type of pure Python wheel compatible with both Python2
-and Python3. They use the "py2.py3-none-any" tag.
+*** Which Wheel Type Should I Use?
+
+*Question:* Does your package have C extensions or compiled code?
+
+*YES:* Use *Platform Wheel*. Build separately for each platform (examples: numpy, pandas)
+*NO*:  Use *Pure Python Wheel* (py3-none-any). Single wheel works on all platforms.
 
 ** Setting Up Your Environment
 
@@ -159,42 +143,92 @@ deactivate
 
 Here's a streamlined workflow that will make package development much easier:
 
+- *One-Time Setup*
+  - Create venv
+  - Activate
+  - Install package in editable mode
+- *Daily Development Loop*
+  - Edit src/
+  - pytest
+  - Test command
+- *Release*
+  - Update version
+  - Build
+  - Test wheel
+
+***** Step-by-Step Commands
+
 #+begin_src shell-script
-# STEP 1: Create a Virtual Environment (one-time setup)
+# =====================================
+# ONE-TIME SETUP (run once per project)
+# =====================================
+
+# STEP 1: Create a Virtual Environment
 python -m venv .venv
 
 # STEP 2: Activate the Virtual Environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# STEP 3: Install Development Dependencies (one-time setup)
+# STEP 3: Install Development Dependencies
 python -m pip install --upgrade pip
 pip install build pytest pytest-cov requests
-# OR better yet:
-pip install -e ".[dev]"  # If you've set up the dev extras in pyproject.toml
+# OR better yet (if you've set up dev extras in pyproject.toml):
+pip install -e ".[dev]"
 
-# STEP 4: Install Your Package in Editable Mode (one-time setup)
-# The -e (editable) flag creates a symlink to your source code instead of copying it
-# If you modify dependencies in pyproject.toml, run this command again
+# STEP 4: Install Your Package in Editable Mode
 pip install -e .
-# Or (when you need to release a new version)
-pip install -e . --force-reinstall
 
-# Now you can work on your code...
+# =====================================
+# DAILY DEVELOPMENT (repeat as needed)
+# =====================================
 
-# STEP 5: Run tests directly without building/installing
+# Edit your code in src/...
+# Changes take effect immediately - no reinstall needed!
+
+# Run tests directly
 pytest
 
-# STEP 6: Build Distribution Packages
-# Clean Build Artifacts (before building)
+# Try your CLI command or import your package
+your-command --help  # Works with your latest code!
+python -c "import yourpackage; print(yourpackage.something())"
+
+# =====================================
+# PREPARING A RELEASE (occasional)
+# =====================================
+
+# STEP 5: Update version in pyproject.toml or __init__.py
+
+# STEP 6: Clean Build Artifacts
 rm -rf build/ dist/ *.egg-info
-# Build
+
+# STEP 7: Build Distribution Packages
 python -m build
 
-# STEP 7: If needed, test the built package
-pip install dist/package_name-0.1.0-py3-none-any.whl --force-reinstall
+# STEP 8: Test the Built Wheel (recommended)
+# Create temporary environment to test the actual wheel
+python -m venv test_env
+source test_env/bin/activate
+pip install dist/package_name-0.1.0-py3-none-any.whl
+# Test it works
+python -c "import package_name; print(package_name.__version__)"
+deactivate
+rm -rf test_env
+
+# If you modify dependencies in pyproject.toml, refresh editable install:
+pip install -e . --force-reinstall
 #+end_src
 
-**** Develop and Test
+***** Editable Mode (=-e=)
+
+=pip install -e .= (the =-e= stands for "editable"):
+
+- *Instant feedback:* When edit code, changes available immediately
+- *No reinstall loop:* Avoid the tedious edit-uninstall-reinstall-test cycle
+- *System-wide access:* Your package/CLI becomes importable everywhere
+- *Real source testing:* Tests run against your actual source code
+- *Fast iteration:* Perfect for active development
+
+**** Testing
 
 #+begin_src shell-script
 # Run all tests
@@ -211,49 +245,35 @@ pytest -v
 
 # Run tests and stop at first failure
 pytest -x
-#+end_src
 
-**** Test the Built Package (optional)
-
-#+begin_src shell-script
-# Create a temporary test environment
-python -m venv test_env
-source test_env/bin/activate  # or test_env\Scripts\activate on Windows
-
-# Install the wheel
-pip install dist/your_package-0.1.0-py3-none-any.whl
-
-# Test that it works
-python -c "import your_package; print(your_package.__version__)"
-
-# Deactivate and remove test environment
-deactivate
-rm -rf test_env
+# Run tests matching a pattern
+pytest -k "test_something"
 #+end_src
 
 **** Additional Useful Commands
 
 #+begin_src shell-script
-# Version Bumping. Update version in pyproject.toml or __init__.py, then:
+# Version Bumping
+# Update version in pyproject.toml or __init__.py, then:
 pip install -e .  # Refresh the editable install
 
-# Complete Clean. Remove all generated and cached files
+# Complete Clean - Remove all generated and cached files
 rm -rf build/ dist/ *.egg-info __pycache__/ .pytest_cache/ .coverage htmlcov/
 find . -type d -name "__pycache__" -exec rm -rf {} +
 find . -type f -name "*.pyc" -delete
 
 # Checking Installed Package (to see installed version and location)
 pip show your_package_name
+
+# List all files in the installed package
+pip show -f your_package_name
+
+# Check what packages are installed
+pip list
+
+# Create requirements.txt from current environment
+pip freeze > requirements.txt
 #+end_src
-
-***** Key Advantages of Development Mode
-
-The magic happens with `pip install -e .` (the `-e` stands for "editable"):
-
-- It installs your package in "development mode"
-- Your package becomes importable system-wide
-- Changes to your code are immediately available without reinstalling
-- You can run your CLI commands directly
 
 ** Recommended Layout
 
@@ -273,14 +293,21 @@ my-package/                  # Project root
     └── test_module.py       # Test files
 #+end_src
 
-The main advantages of using the =src= directory:
-- Prevents accidental imports from the project root
-- Reduces confusion between installed and development code
-- Simplify testing
+*Why Use the =src= Layout?*
+
+The =src= layout (also called "src layout") is considered best practice for several reasons:
+
+- *Prevents accidental imports:* Can't accidentally import from project root
+- *Clear separation:* Distinguishes installed code from development code
+- *Better testing:* Ensures tests run against installed package, not source
+- *Catches packaging errors:* Missing files in setup will cause import errors
+- *Simpler editable installs:* More predictable behavior with =pip install -e .=
 
 *** Configuration Files
 
 **** Modern Approach: pyproject.toml (Recommended)
+
+This is the modern, preferred approach defined by PEP 517/518.
 
 #+begin_src toml
 [build-system]
@@ -291,101 +318,213 @@ build-backend = "setuptools.build_meta"
 name = "my-package"
 version = "1.0.0"
 description = "A sample Python package"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
 requires-python = ">=3.7"
-license = {text = "MIT"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+license = "MIT"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["example", "tutorial"]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/hello"
+
+# Runtime dependencies
+dependencies = [
+    "requests>=2.28.0",
+    "click>=8.0.0",
+]
+
+# This section is REQUIRED for pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "build",
+    "wheel",
+    "setuptools",
+    "requests",  # if used in dev/testing
+]
+
+docs = [
+    "sphinx>=4.0",
+    "sphinx-rtd-theme>=1.0",
 ]
 
 # Define command-line scripts
+# Format: command-name = "package.module:function"
+# This creates an executable script called 'my-command'
 [project.scripts]
-my-command = "my_package.cli:main"  # Creates executable 'my-command'
+my-command = "my_package.cli:main"
 
-[project.urls]
-"Homepage" = "https://github.com/yourusername/my-package"
-"Bug Tracker" = "https://github.com/yourusername/my-package/issues"
+# Setuptools-specific configuration
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 #+end_src
 
-**** Legacy Approach: setup.py
+** Version Management Strategy
 
-#+begin_src python
-from setuptools import setup, find_packages
+[[file:version-management-strategy.org][Version Management Strategy]]
 
-setup(
-    name="my-package",
-    version="1.0.0",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
-    python_requires=">=3.7",
-    entry_points={
-        "console_scripts": [
-            "my-command=my_package.cli:main",  # Creates executable 'my-command'
-        ],
-    },
-)
-#+end_src
+** Controlling Package Contents
+
+[[file:controlling-package-contents.org][Controlling Package Contents]]
 
 ** Building Wheels
 
 *** Using build (Recommended)
 
+The modern, PEP 517-compliant way:
+
 #+begin_src shell
 python -m build
 #+end_src
 
-This creates:
-- A wheel file in `dist/my_package-1.0.0-py3-none-any.whl`
-- A source distribution in `dist/my_package-1.0.0.tar.gz`
+This creates both:
+- A wheel file: =dist/my_package-1.0.0-py3-none-any.whl=
+- A source distribution: =dist/my_package-1.0.0.tar.gz=
+
+*** Build only wheel or sdist
+
+#+begin_src shell
+# Build only wheel
+python -m build --wheel
+
+# Build only source distribution
+python -m build --sdist
+#+end_src
 
 *** Using setuptools directly (Legacy)
 
 #+begin_src shell
+# Build wheel
 python setup.py bdist_wheel
+
+# Build source distribution
+python setup.py sdist
+
+# Build both
+python setup.py sdist bdist_wheel
 #+end_src
+
+*Note:* Direct =setup.py= invocation is deprecated. Use =python -m build= instead.
 
 ** Install and uninstall package
 
 *** Install and uninstall your package as system-wide CLI tool
 
-Use 'pipx' (an example of installation: sudo aptitude install pipx)
+Use =pipx= for installing CLI applications in isolated environments:
 
 #+begin_src shell-script
-# To install
+# Install pipx (if not already installed)
+# Debian/Ubuntu
+sudo apt install pipx
+# Or via pip
+python -m pip install --user pipx
+python -m pipx ensurepath
+
+# Install your package
 pipx install dist/package_name-0.1.0-py3-none-any.whl
-# To uninstall
+
+# Or install directly from PyPI
+pipx install package_name
+
+# Uninstall
 pipx uninstall package_name
+
+# List installed packages
+pipx list
+
+# Upgrade a package
+pipx upgrade package_name
 #+end_src
 
-*** Install and uninstall your package for an environment
+*Why pipx?*
+- Each application gets its own virtual environment
+- No dependency conflicts between tools
+- Commands available system-wide
+- Perfect for CLI tools like black, pytest, flake8, etc.
+
+*** Install and uninstall your package in an environment
 
 #+begin_src shell-script
-# Install packages within the environment
+# Install from PyPI
 pip install package-name
-# Install a builded package
+
+# Install from local wheel
+pip install dist/package_name-0.1.0-py3-none-any.whl
+
+# Install from source (current directory)
 pip install .
 
-# Create requirements.txt
+# Install in editable/development mode
+pip install -e .
+
+# Install with extra dependencies
+pip install "package-name[dev]"
+pip install -e ".[dev,docs]"
+
+# Uninstall
+pip uninstall package-name
+
+# Upgrade to latest version
+pip install --upgrade package-name
+
+# Force reinstall (useful for testing)
+pip install --force-reinstall package-name
+#+end_src
+
+*** Managing dependencies
+
+#+begin_src shell-script
+# Create requirements.txt from current environment
 pip freeze > requirements.txt
 
 # Install from requirements.txt
 pip install -r requirements.txt
+
+# Show installed package details
+pip show package-name
+
+# List all installed packages
+pip list
+
+# List outdated packages
+pip list --outdated
 #+end_src
 
-#+begin_src shell-script
-# Install your package in development mode
-pip install -e .
-#+end_src
+** Advanced Topics
 
-** Troubleshooting Package
+[[file:advanced-topics.org][Advanced Topics]]
 
-Check the actual structure inside the wheel
+** Troubleshooting Guide
 
-#+begin_src shell-script
-pip show -f greeting
-#+end_src
+[[file:troubleshooting-guide.org][Troubleshooting Guide]]
 
 * Examples
 
@@ -1136,4 +1275,6 @@ def test_cli_module_version():
 
 For development workflow and testing commands, see [[file:hello/README.md]]
 
-See [[file:hello/README.md]]
+* Command Reference Card
+
+[[file:command-reference-card.org][Command Reference Card]]

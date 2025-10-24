@@ -1,0 +1,83 @@
+#+TITLE: Python Package Development - Command Reference Card
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+* Command Reference Card
+
+Quick reference for common Python packaging commands.
+
+** Environment Management
+
+| Command                    | Purpose                                   |
+|----------------------------+-------------------------------------------|
+| =python -m venv .venv=       | Create virtual environment                |
+| =source .venv/bin/activate=  | Activate environment (Linux/macOS)        |
+| =.venv\Scripts\activate=     | Activate environment (Windows cmd)        |
+| =.venv\Scripts\Activate.ps1= | Activate environment (Windows PowerShell) |
+| =deactivate=                 | Deactivate virtual environment            |
+| =which python=               | Check which Python is being used          |
+| =pip list=                   | List installed packages                   |
+
+** Development Commands
+
+| Command                         | Purpose                                                |
+|---------------------------------+--------------------------------------------------------|
+| =pip install -e ".[dev]"=         | Install package in editable mode with dev dependencies |
+| =pip install -e .=                | Install package in editable mode (basic)               |
+| =pip install .=                   | Install package normally                               |
+| =pip install --force-reinstall .= | Force reinstall package                                |
+| =pip uninstall package-name=      | Uninstall package                                      |
+| =pip show package-name=           | Show package details and location                      |
+| =pip show -f package-name=        | Show all files in package                              |
+
+** Testing Commands
+
+| Command                                | Purpose                    |
+|----------------------------------------+----------------------------|
+| =pytest=                                 | Run all tests              |
+| =pytest -v=                              | Run tests in verbose mode  |
+| =pytest -x=                              | Stop at first failure      |
+| =pytest -k "pattern"=                    | Run tests matching pattern |
+| =pytest tests/test_file.py=              | Run specific test file     |
+| =pytest --cov=package=                   | Run tests with coverage    |
+| =pytest --cov=package --cov-report=html= | Coverage with HTML report  |
+
+** Building and Publishing
+
+| Command                                   | Purpose                           |
+|-------------------------------------------+-----------------------------------|
+| =python -m build=                           | Build wheel + source distribution |
+| =python -m build --wheel=                   | Build wheel only                  |
+| =python -m build --sdist=                   | Build source distribution only    |
+| =twine upload --repository testpypi dist/*= | Upload to TestPyPI                |
+| =twine upload dist/*=                       | Upload to PyPI                    |
+| =pip install twine=                         | Install upload tool               |
+
+** Inspection and Debugging
+
+| Command                                        | Purpose                   |
+|------------------------------------------------+---------------------------|
+| =python -c "import pkg; print(pkg.__version__)"= | Check package version     |
+| =python -c "from pkg import func; print(func)"=  | Test import               |
+| =unzip -l dist/package-*.whl=                    | List contents of wheel    |
+| =pip freeze > requirements.txt=                  | Create requirements file  |
+| =pip install -r requirements.txt=                | Install from requirements |
+
+** Cleanup Commands
+
+| Command                                               | Purpose                      |
+|-------------------------------------------------------+------------------------------|
+| =rm -rf build/ dist/ *.egg-info=                        | Clean build artifacts        |
+| =rm -rf __pycache__/ .pytest_cache/ .coverage htmlcov/= | Clean test artifacts         |
+| =find . -type d -name "__pycache__" -exec rm -rf {} +=    | Clean all __pycache__          |
+| =find . -type f -name "*.pyc" -delete=                  | Delete compiled Python files |
+
+** CLI Tool Management (pipx)
+
+| Command                           | Purpose                                  |
+|-----------------------------------+------------------------------------------|
+| =pipx install package-name=         | Install CLI tool in isolated environment |
+| =pipx install ./dist/package-*.whl= | Install local wheel with pipx            |
+| =pipx list=                         | List installed CLI tools                 |
+| =pipx uninstall package-name=       | Uninstall CLI tool                       |
+| =pipx upgrade package-name=         | Upgrade CLI tool                         |
+| =pipx ensurepath=                   | Add pipx binaries to PATH                |

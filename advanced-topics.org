@@ -1,0 +1,111 @@
+#+TITLE: Python Package Development - Advanced Topics
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+* Contents                                                         :noexport:
+:PROPERTIES:
+:TOC:       :include all :depth 3
+:END:
+
+:CONTENTS:
+- [[#advanced-topics][Advanced Topics]]
+  - [[#pre-release-checklist][Pre-Release Checklist]]
+  - [[#next-steps][Next Steps]]
+    - [[#publishing-to-pypi][Publishing to PyPI]]
+    - [[#versioning-best-practices][Versioning Best Practices]]
+    - [[#dependency-management][Dependency Management]]
+    - [[#continuous-integration][Continuous Integration]]
+    - [[#documentation][Documentation]]
+    - [[#code-quality][Code Quality]]
+    - [[#advanced-packaging][Advanced Packaging]]
+  - [[#useful-resources][Useful Resources]]
+:END:
+
+* Advanced Topics
+
+** Pre-Release Checklist
+
+Before building and publishing your package:
+
+- [ ] All tests passing (=pytest=)
+- [ ] Version number updated in =pyproject.toml=
+- [ ] =README.md= is current and accurate
+- [ ] =LICENSE= file included
+- [ ] All directories have proper =__init__.py= files
+- [ ] Dependencies are correctly specified
+- [ ] Cleaned old builds (=rm -rf dist/ build/ *.egg-info=)
+- [ ] Tested the built wheel in fresh environment
+- [ ] Git committed and tagged (if using version control)
+- [ ] CHANGELOG updated (if applicable)
+
+** Next Steps
+
+Once you're comfortable with the basics, explore these topics:
+
+*** Publishing to PyPI
+
+- *TestPyPI:* Practice publishing at https://test.pypi.org
+- *PyPI:* Official Python Package Index at https://pypi.org
+- *Tools:* Use =twine= for secure uploads
+- *Authentication:* Set up API tokens for security
+
+#+begin_src shell-script
+# Install twine
+pip install twine
+
+# Upload to TestPyPI first (for testing)
+twine upload --repository testpypi dist/*
+
+# Upload to PyPI (production)
+twine upload dist/*
+#+end_src
+
+*** Versioning Best Practices
+
+- *Semantic Versioning:* MAJOR.MINOR.PATCH (e.g., 1.2.3)
+  - MAJOR: Breaking changes
+  - MINOR: New features (backward compatible)
+  - PATCH: Bug fixes
+- *Pre-releases:* 1.0.0a1 (alpha), 1.0.0b1 (beta), 1.0.0rc1 (release candidate)
+- *Development versions:* 1.0.0.dev1
+
+*** Dependency Management
+
+- Pin exact versions for applications: =package==1.2.3=
+- Use ranges for libraries: =package>=1.2,<2.0=
+- Consider using =poetry= or =pipenv= for complex projects
+
+*** Continuous Integration
+
+- *GitHub Actions:* Automated testing and building
+- *Pre-commit hooks:* Format and lint before committing
+- *Automated publishing:* Deploy to PyPI on release
+
+*** Documentation
+
+- *Docstrings:* Document all public functions and classes
+- *Sphinx:* Generate documentation from docstrings
+- *Read the Docs:* Free hosting for documentation
+- *MkDocs:* Alternative documentation generator
+
+*** Code Quality
+
+- *Type hints:* Use =mypy= for static type checking
+- *Linting:* =flake8=, =pylint=, or =ruff=
+- *Formatting:* =black= for consistent code style
+- *Testing:* Aim for high test coverage
+
+*** Advanced Packaging
+
+- *Entry points:* Plugin systems
+- *Data files:* Including non-Python files
+- *C extensions:* Compiling for performance
+- *Namespace packages:* Splitting packages across distributions
+
+** Useful Resources
+
+- *Python Packaging User Guide:* https://packaging.python.org
+- *PyPI:* https://pypi.org
+- *Setuptools Documentation:* https://setuptools.pypa.io
+- *Build Documentation:* https://pypa-build.readthedocs.io
+- *Twine Documentation:* https://twine.readthedocs.io
+- *Sample Projects:* https://github.com/pypa/sampleproject

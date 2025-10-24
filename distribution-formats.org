@@ -1,0 +1,60 @@
+#+TITLE: Python Package Development - Distribution Formats
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+* Distribution Formats
+
+** Format Comparison
+
+| Feature              | Source Distribution (sdist)    | Wheel Distribution (bdist_wheel) |
+|----------------------+--------------------------------+----------------------------------|
+| File extension       | .tar.gz                        | .whl                             |
+| Installation speed   | Slower (compiles at install)   | Fast (pre-built)                 |
+| Platform specific    | No                             | Can be (for compiled code)       |
+| Contains tests       | Yes                            | No                               |
+| Contains docs        | Yes                            | No                               |
+| Compilation required | At install time                | Already done                     |
+| Best for             | Source distribution, archiving | End users, deployment            |
+
+** Source Distribution (sdist)
+
+A source distribution is a .tar.gz archive containing your project's source code plus metadata.
+
+#+begin_src text
+my-package-1.0.0.tar.gz
+├── my_package/
+│   ├── __init__.py
+│   └── module.py
+├── setup.py or pyproject.toml
+├── README.md
+├── LICENSE
+└── PKG-INFO
+#+end_src
+
+Key characteristics:
+- Platform-independent
+- Requires a build step during installation
+- Contains source code only (not compiled code)
+- Often includes documentation and tests
+
+** Wheel Distribution (bdist_wheel)
+
+A wheel is a .whl file (ZIP-format archive) containing pre-built files ready for installation.
+
+#+begin_src text
+my_package-1.0.0-py3-none-any.whl
+├── my_package/
+│   ├── __init__.py
+│   └── module.py
+└── my_package-1.0.0.dist-info/
+    ├── METADATA
+    ├── RECORD
+    ├── WHEEL
+    └── top_level.txt
+#+end_src
+
+Key characteristics:
+- Pre-built, ready for immediate installation
+- No compilation required during installation
+- Faster installation than sdists
+- Doesn't include tests or documentation
+- Platform-specific when including compiled extensions

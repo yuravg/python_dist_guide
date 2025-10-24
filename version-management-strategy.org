@@ -1,0 +1,442 @@
+#+TITLE: Python Package Development - Version Management Strategy
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+* Contents                                                         :noexport:
+:PROPERTIES:
+:TOC:       :include all :depth 2
+:END:
+
+:CONTENTS:
+- [[#version-management-strategy][Version Management Strategy]]
+  - [[#quick-comparison][Quick Comparison]]
+  - [[#approach-1-dynamic-version-management-recommended][Approach 1: Dynamic Version Management (Recommended)]]
+  - [[#approach-2-static-version-management][Approach 2: Static Version Management]]
+  - [[#approach-3-build-time-version-injection-advanced][Approach 3: Build-Time Version Injection (Advanced)]]
+  - [[#recommendations][Recommendations]]
+  - [[#common-issues-and-troubleshooting][Common Issues and Troubleshooting]]
+  - [[#best-practices][Best Practices]]
+  - [[#summary][Summary]]
+:END:
+
+* Version Management Strategy
+
+There are two primary approaches to version management in Python packages: *Dynamic* and
+*Static*. This guide covers both approaches, their tradeoffs, and recommendations for when to use
+each.
+
+** Quick Comparison
+
+| Aspect           | Dynamic (Recommended)                | Static                              |
+|------------------+--------------------------------------+-------------------------------------|
+| Source of Truth  | =pyproject.toml= only                  | Both =pyproject.toml= and =__init__.py= |
+| Runtime Lookup   | Yes, via =importlib.metadata=          | No, hardcoded in code               |
+| Duplication      | None                                 | Version appears in 2+ places        |
+| Sync Issues      | Never (impossible)                   | Possible if versions mismatch       |
+| Development Mode | Shows "unknown" or installed version | Always shows hardcoded value        |
+| Performance      | Tiny overhead on first import        | No overhead                         |
+| Complexity       | Slightly more complex                | Very simple                         |
+
+** Approach 1: Dynamic Version Management (Recommended)
+
+This is the *modern, recommended approach* that avoids version duplication entirely.
+
+*** Implementation
+
+*Single Source of Truth:* Define version ONCE in =pyproject.toml=
+
+#+begin_src toml
+[project]
+name = "your-package-name"
+version = "1.0.0"  # Only place to change version
+#+end_src
+
+In =__init__.py=, read it dynamically. There are multiple approaches to handle the package name:
+
+**** Simplest: Auto-detect from =__name__= (Recommended when distribution name matches import name)
+
+#+begin_src python
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)  # Auto-detect from module name
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+*Pros:*
+- Zero duplication - no hardcoded package name
+- Automatically uses the correct package name
+- Simplest and most maintainable
+
+*Cons:*
+- Only works if distribution name exactly matches import name
+- Fails when package name has dashes (e.g., =my-package=) but imports with underscores (=my_package=)
+- Won't work for packages where distribution name differs from import name (like =Pillow= vs =PIL=)
+
+*When to use:* Your =pyproject.toml= has =name = "mypackage"= and you =import mypackage=
+
+**** Alternative: Explicit package name with defensive error handling
+
+#+begin_src python
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version("your-package-name")  # Must match pyproject.toml [project] name
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+*Pros:*
+- Works when distribution name differs from import name
+- Handles packages with dashes in distribution name (=my-package=) importing as underscores (=my_package=)
+- More robust error handling (catches both =ImportError= and =PackageNotFoundError=)
+- Explicit and clear what package you're referencing
+
+*Cons:*
+- Package name appears in two places (=pyproject.toml= and =__init__.py=)
+- Must manually keep them in sync
+
+*When to use:* Your =pyproject.toml= has =name = "my-package"= but you =import my_package= (or any name mismatch)
+
+**** Advanced: Convert import name to distribution name
+
+#+begin_src python
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    # Try exact name first, then try with underscores converted to dashes
+    try:
+        __version__ = version(__name__)
+    except PackageNotFoundError:
+        __version__ = version(__name__.replace("_", "-"))
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+*Pros:*
+- Handles the common case where =my-package= → =my_package=
+- No hardcoded name needed
+- Fallback for both naming conventions
+
+*Cons:*
+- More complex
+- Still fails for truly different names (like =Pillow= vs =PIL=)
+- Double lookup on every import if using dashes
+
+*When to use:* You want automation but need to handle dash/underscore differences
+
+**** Error Handling Comparison
+
+All the above examples use =(ImportError, PackageNotFoundError)= for defensive error handling. You can also use stricter handling:
+
+#+begin_src python
+from importlib.metadata import version, PackageNotFoundError  # Import outside try
+
+try:
+    __version__ = version(__name__)  # or explicit name
+except PackageNotFoundError:
+    __version__ = "unknown"
+#+end_src
+
+*Stricter approach:*
+- Import statement is outside =try= block
+- Only catches =PackageNotFoundError=
+- Will fail fast on Python 3.7 without backport (helps catch compatibility issues)
+
+*Defensive approach (shown in examples above):*
+- Everything inside =try= block
+- Catches both =ImportError= and =PackageNotFoundError=
+- Graceful degradation in more edge cases
+
+*** Why This Approach?
+
+- *No version duplication:* Change version in one place only (=pyproject.toml=)
+- *Automatic sync:* Package metadata and code always match - impossible to have mismatches
+- *Works everywhere:* Compatible with all modern packaging tools (setuptools, flit, hatch, PDM)
+- *Fails safely:* Returns "unknown" during development before first install
+- *Industry standard:* Used by major Python projects and recommended by PyPA
+
+*** Updating Version Workflow
+
+#+begin_src shell
+# 1. Edit pyproject.toml - change version = "1.0.0" to "1.0.1"
+# 2. If in editable mode, refresh (usually not needed, but safe):
+pip install -e .
+
+# 3. Verify
+python -c "import your_package; print(your_package.__version__)"
+#+end_src
+
+*** Important Notes
+
+- *Package name matching:* The =version()= function takes the *distribution name* from =pyproject.toml=, which may differ from the import name
+  - Distribution name (in =pyproject.toml=): Can use dashes, e.g., =my-package=
+  - Import name (in code): Uses underscores, e.g., =import my_package=
+  - Using =version(__name__)= works only when they match exactly
+- =importlib.metadata= is available in Python 3.8+ (use =importlib_metadata= backport for Python 3.7)
+- The version lookup happens once per import, performance impact is negligible
+- *Recommended:* Use =version(__name__)= for simple packages, or the dash/underscore fallback for maximum compatibility
+
+*** Real-World Examples
+
+**** Example 1: Simple package (names match)
+
+#+begin_src toml
+# pyproject.toml
+[project]
+name = "hellolib"  # No dashes
+#+end_src
+
+#+begin_src python
+# src/hellolib/__init__.py
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)  # Works! "hellolib" == "hellolib"
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+**** Example 2: Package with dashes (names differ)
+
+#+begin_src toml
+# pyproject.toml
+[project]
+name = "my-cool-package"  # Has dashes
+#+end_src
+
+#+begin_src python
+# src/my_cool_package/__init__.py
+# Option A: Explicit name (simple and reliable)
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version("my-cool-package")  # Explicit distribution name
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+
+# Option B: Auto-convert (more automatic)
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    try:
+        __version__ = version(__name__)  # Try "my_cool_package"
+    except PackageNotFoundError:
+        __version__ = version(__name__.replace("_", "-"))  # Try "my-cool-package"
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+** Approach 2: Static Version Management
+
+This is the *traditional approach* where version is hardcoded in the source code.
+
+*** Implementation
+
+Define version in =pyproject.toml=:
+
+#+begin_src toml
+[project]
+name = "your-package-name"
+version = "1.0.0"
+#+end_src
+
+*Also* define it in =__init__.py=:
+
+#+begin_src python
+__version__ = "1.0.0"  # Must manually keep in sync with pyproject.toml
+#+end_src
+
+Or in a dedicated =_version.py= file:
+
+#+begin_src python
+# src/your_package/_version.py
+__version__ = "1.0.0"
+#+end_src
+
+#+begin_src python
+# src/your_package/__init__.py
+from ._version import __version__
+#+end_src
+
+*** Why This Approach?
+
+- *Simplicity:* Very straightforward, no dependencies on =importlib.metadata=
+- *Always available:* Works even before package is installed
+- *Zero overhead:* No runtime lookup
+- *Explicit:* Version is visible directly in source code
+
+*** Drawbacks
+
+- *Duplication:* Version must be maintained in multiple places
+- *Sync risk:* Easy to forget updating one location, causing mismatches
+- *Manual process:* No automatic synchronization between =pyproject.toml= and code
+- *Error prone:* Human error can cause =pip show= to show different version than =__version__=
+
+*** Updating Version Workflow
+
+#+begin_src shell
+# 1. Edit pyproject.toml - change version = "1.0.0" to "1.0.1"
+# 2. Edit __init__.py (or _version.py) - ALSO change to "1.0.1"
+# 3. If in editable mode, refresh:
+pip install -e .
+
+# 4. Verify BOTH match:
+python -c "import your_package; print(your_package.__version__)"
+pip show your-package-name | grep Version
+#+end_src
+
+** Approach 3: Build-Time Version Injection (Advanced)
+
+Some build backends support reading version from code and writing it to metadata at build time.
+
+*** Using setuptools with dynamic version
+
+#+begin_src toml
+[project]
+name = "your-package-name"
+dynamic = ["version"]  # Version will be read from code
+
+[tool.setuptools.dynamic]
+version = {attr = "your_package.__version__"}
+#+end_src
+
+#+begin_src python
+# src/your_package/__init__.py
+__version__ = "1.0.0"  # Source of truth is in code
+#+end_src
+
+*** Pros and Cons
+
+*Pros:*
+- Single source of truth in code (reverse of dynamic approach)
+- No =importlib.metadata= lookup needed
+- Version always available
+
+*Cons:*
+- Build backend specific (not all support this)
+- Inverts the typical pattern (code drives metadata instead of metadata drives code)
+- Requires reading and executing Python code during build
+
+** Recommendations
+
+*** Use Dynamic Version Management When:
+
+- Creating a new package from scratch
+- You want the most maintainable solution
+- You're using Python 3.8+ (or can add =importlib_metadata= dependency)
+- Your package is part of a larger ecosystem with automated version updates
+- You want to follow modern Python packaging best practices
+
+*** Use Static Version Management When:
+
+- You need version available before package installation (rare)
+- You're working with legacy code that already uses this pattern
+- You need to support very old Python versions and can't add dependencies
+- You have automated tooling that updates both locations simultaneously
+- Your package is extremely simple and rarely versioned
+
+*** Use Build-Time Injection When:
+
+- Your build system provides excellent support for it
+- You strongly prefer version living in code rather than configuration
+- You're using a modern build backend like Hatch or PDM that handles this well
+
+** Common Issues and Troubleshooting
+
+*** Issue: =__version__= shows "unknown"
+
+*Cause:* Package not installed, even in editable mode
+
+*Solution:*
+#+begin_src shell
+pip install -e .  # Install in editable mode
+#+end_src
+
+*** Issue: =__version__= shows old version after update
+
+*Cause:* Metadata cache not refreshed (rare with modern pip)
+
+*Solution:*
+#+begin_src shell
+pip install -e . --force-reinstall --no-deps
+#+end_src
+
+*** Issue: =PackageNotFoundError= even after installation
+
+*Cause:* Package name mismatch between =version("name")= call and =pyproject.toml=
+
+*Solution:*
+#+begin_src python
+# Ensure these match exactly:
+# pyproject.toml: name = "my-package"
+# __init__.py: __version__ = version("my-package")  # Note: use name from pyproject.toml
+#+end_src
+
+*** Issue: =ImportError: cannot import name 'version' from 'importlib.metadata'=
+
+*Cause:* Running on Python 3.7 or earlier where =importlib.metadata= is not in standard library
+
+*Solutions:*
+
+Option 1: Add the backport dependency:
+#+begin_src toml
+# In pyproject.toml
+[project]
+dependencies = [
+    "importlib-metadata>=4.0; python_version<'3.8'"
+]
+#+end_src
+
+Option 2: Use Approach 1b (catch both ImportError and PackageNotFoundError):
+#+begin_src python
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version("your-package-name")
+except (ImportError, PackageNotFoundError):
+    __version__ = "unknown"
+#+end_src
+
+Option 3: Try importing the backport explicitly:
+#+begin_src python
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    # Python < 3.8, try backport
+    from importlib_metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("your-package-name")
+except PackageNotFoundError:
+    __version__ = "unknown"
+#+end_src
+
+*** Issue: Static version in code doesn't match =pip show=
+
+*Cause:* Forgot to update one location
+
+*Solution:*
+- Update both =pyproject.toml= and =__init__.py= to same version
+- Run =pip install -e .= to refresh
+- Consider switching to dynamic versioning to prevent this
+
+** Best Practices
+
+1. *Choose one approach* and be consistent across your project
+2. *Document your choice* in your project's contributing guide
+3. *Validate in CI/CD:* Add a test that version is accessible and valid format
+4. *Semantic Versioning:* Follow SemVer (MAJOR.MINOR.PATCH) for version numbers
+5. *Automate when possible:* Use tools like =bump2version= or =commitizen= for version updates
+6. *Version format validation:*
+
+#+begin_src python
+# In tests/test_version.py
+import re
+import your_package
+
+def test_version_format():
+    """Ensure version follows semantic versioning"""
+    assert re.match(r'^\d+\.\d+\.\d+', your_package.__version__)
+#+end_src
+
+** Summary
+
+For *new projects*, use *Dynamic Version Management* (Approach 1). It's the modern standard,
+eliminates sync issues, and is recommended by the Python Packaging Authority. The tiny overhead
+of =importlib.metadata= is negligible compared to the maintenance benefits.
+
+Only use static versioning if you have a specific requirement that dynamic versioning cannot satisfy.

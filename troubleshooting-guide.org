@@ -1,0 +1,1262 @@
+#+TITLE: Python Package Development - Troubleshooting Guide
+#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+
+#+begin_quote
+A practical troubleshooting companion to the Python Wheel Distributions Guide.
+This guide focuses on solving real problems you'll encounter during Python package development.
+#+end_quote
+
+* Contents                                                         :noexport:
+:PROPERTIES:
+:TOC:       :include all :depth 2
+:END:
+
+:CONTENTS:
+- [[#quick-diagnostic-reference][Quick Diagnostic Reference]]
+  - [[#symptom--likely-cause][Symptom → Likely Cause]]
+- [[#development-environment-problems][Development Environment Problems]]
+  - [[#virtual-environment-not-activated][Virtual Environment Not Activated]]
+  - [[#wrong-python-version][Wrong Python Version]]
+  - [[#pip-installing-to-wrong-location][pip Installing to Wrong Location]]
+  - [[#path-configuration-issues][PATH Configuration Issues]]
+- [[#package-installation-issues][Package Installation Issues]]
+  - [[#module-not-found-after-installation][Module Not Found After Installation]]
+  - [[#editable-install-not-working][Editable Install Not Working]]
+  - [[#changes-not-taking-effect][Changes Not Taking Effect]]
+  - [[#dependencies-not-installing-automatically][Dependencies Not Installing Automatically]]
+- [[#package-structure-and-configuration][Package Structure and Configuration]]
+  - [[#missing-__init__py-files][Missing _init_.py Files]]
+  - [[#incorrect-pyprojecttoml-configuration][Incorrect pyproject.toml Configuration]]
+  - [[#package-discovery-problems][Package Discovery Problems]]
+  - [[#version-showing-as-unknown][Version Showing as "unknown"]]
+- [[#building-and-distribution][Building and Distribution]]
+  - [[#stale-build-artifacts][Stale Build Artifacts]]
+  - [[#code-works-in-development-but-not-in-built-wheel][Code Works in Development but Not in Built Wheel]]
+  - [[#build-tool-errors][Build Tool Errors]]
+  - [[#wrong-files-included-in-distribution][Wrong Files Included in Distribution]]
+- [[#cli-application-specific-issues][CLI Application Specific Issues]]
+  - [[#command-not-found-after-installation][Command Not Found After Installation]]
+  - [[#entry-point-configuration-issues][Entry Point Configuration Issues]]
+  - [[#pipx-installation-issues][pipx Installation Issues]]
+- [[#testing-problems][Testing Problems]]
+  - [[#tests-cant-import-package][Tests Can't Import Package]]
+  - [[#tests-pass-but-built-wheel-fails][Tests Pass but Built Wheel Fails]]
+  - [[#pytest-configuration-issues][Pytest Configuration Issues]]
+- [[#debugging-techniques-and-tools][Debugging Techniques and Tools]]
+  - [[#package-inspection-commands][Package Inspection Commands]]
+  - [[#python-path-debugging][Python Path Debugging]]
+  - [[#verbose-build-and-install][Verbose Build and Install]]
+  - [[#validation-tools][Validation Tools]]
+  - [[#import-debugging][Import Debugging]]
+  - [[#wheel-inspection][Wheel Inspection]]
+- [[#advanced-troubleshooting][Advanced Troubleshooting]]
+  - [[#import-system-edge-cases][Import System Edge Cases]]
+  - [[#dependency-conflicts][Dependency Conflicts]]
+  - [[#platform-specific-issues][Platform-Specific Issues]]
+  - [[#build-backend-problems][Build Backend Problems]]
+- [[#emergency-quick-fixes][Emergency Quick Fixes]]
+- [[#useful-resources][Useful Resources]]
+:END:
+
+
+* Quick Diagnostic Reference
+
+** Symptom → Likely Cause
+
+| Symptom                             | Most Common Cause          | Quick Fix                             |
+|-------------------------------------+----------------------------+---------------------------------------|
+| =ModuleNotFoundError= after install   | Not in virtual environment | =source .venv/bin/activate=             |
+| Changes not taking effect           | Not in editable mode       | =pip install -e .=                      |
+| =__version__= shows "unknown"         | Package not installed      | =pip install -e .=                      |
+| Command not found                   | Missing =[project.scripts]=  | Check =pyproject.toml=                  |
+| Tests can't import package          | Package not installed      | =pip install -e .=                      |
+| Import works in dev, fails in wheel | Missing =__init__.py=        | Add =__init__.py= files                 |
+| Old code still running              | Stale .pyc cache           | =find . -name "*.pyc" -delete=          |
+| Build includes test files           | Wrong package discovery    | Check =[tool.setuptools.packages.find]= |
+
+* Development Environment Problems
+
+** Virtual Environment Not Activated
+
+*Symptoms:*
+- Package installs to system Python
+- =ModuleNotFoundError= even after install
+- Wrong Python version running
+
+*Diagnosis:*
+#+begin_src shell
+# Check which Python you're using
+which python
+python --version
+
+# Check if in virtual environment
+echo $VIRTUAL_ENV  # Should show path to your .venv
+#+end_src
+
+*Solutions:*
+#+begin_src shell
+# Activate virtual environment
+source .venv/bin/activate  # Linux/macOS
+.venv\Scripts\activate     # Windows cmd
+.venv\Scripts\Activate.ps1 # Windows PowerShell
+
+# Verify activation
+which python  # Should point to .venv/bin/python
+#+end_src
+
+** Wrong Python Version
+
+*Problem:* Using Python 2.x or incompatible Python 3.x version
+
+*Diagnosis:*
+#+begin_src shell
+python --version
+python3 --version
+
+# Check what your project requires
+grep "requires-python" pyproject.toml
+#+end_src
+
+*Solutions:*
+#+begin_src shell
+# Create venv with specific Python version
+python3.9 -m venv .venv
+python3.10 -m venv .venv
+
+# On systems with multiple Python versions
+/usr/bin/python3.11 -m venv .venv
+#+end_src
+
+** pip Installing to Wrong Location
+
+*Symptoms:*
+- Install seems to work but package not importable
+- Package installed but in different Python
+
+*Diagnosis:*
+#+begin_src shell
+# Check where pip installs
+pip show pip | grep Location
+
+# Check all Python paths
+python -c "import sys; print('\n'.join(sys.path))"
+
+# Find where your package is (if anywhere)
+python -c "import your_package; print(your_package.__file__)"
+#+end_src
+
+*Solutions:*
+#+begin_src shell
+# Always use python -m pip instead of bare pip
+python -m pip install -e .
+
+# Or explicitly use the venv pip
+.venv/bin/pip install -e .
+#+end_src
+
+** PATH Configuration Issues
+
+*Problem:* Installed CLI commands not found
+
+*Diagnosis:*
+#+begin_src shell
+echo $PATH
+
+# Find where command was installed
+find ~/.local -name "your-command"
+find .venv -name "your-command"
+
+# For pipx
+pipx list
+#+end_src
+
+*Solutions:*
+#+begin_src shell
+# Add Python user scripts to PATH (in ~/.bashrc or ~/.zshrc)
+export PATH="$HOME/.local/bin:$PATH"
+
+# For pipx
+pipx ensurepath
+
+# Then reload shell or source config
+source ~/.bashrc
+#+end_src
+
+* Package Installation Issues
+
+** Module Not Found After Installation
+
+*Problem:* =ModuleNotFoundError: No module named 'your_package'=
+
+*Root Causes & Solutions:*
+
+1. *Not in virtual environment* (MOST COMMON)
+   #+begin_src shell
+   # Verify you're in venv
+   echo $VIRTUAL_ENV
+
+   # Activate if not
+   source .venv/bin/activate
+   #+end_src
+
+2. *Wrong directory during install*
+   #+begin_src shell
+   # Must be in directory containing pyproject.toml
+   ls pyproject.toml  # Should exist
+
+   # Install from correct location
+   pip install -e .
+   #+end_src
+
+3. *Incorrect package configuration*
+   #+begin_src toml
+   # In pyproject.toml - must have both sections
+   [tool.setuptools]
+   package-dir = {"" = "src"}
+
+   [tool.setuptools.packages.find]
+   where = ["src"]
+   #+end_src
+
+4. *Missing __init__.py files*
+   #+begin_src shell
+   # Every package directory needs __init__.py
+   src/
+   └── your_package/
+       ├── __init__.py      # REQUIRED
+       └── subpackage/
+           ├── __init__.py  # REQUIRED
+           └── module.py
+   #+end_src
+
+*Verification:*
+#+begin_src shell
+# Check if package is installed
+pip list | grep your-package
+
+# Check installation details
+pip show your-package
+
+# Verify Python can find it
+python -c "import your_package; print(your_package.__file__)"
+
+# Test import manually
+python -c "import your_package; print(dir(your_package))"
+#+end_src
+
+** Editable Install Not Working
+
+*Symptoms:*
+- =pip install -e .= succeeds but package not importable
+- Changes not taking effect
+
+*Diagnosis:*
+#+begin_src shell
+# Check if actually installed in editable mode
+pip show your-package | grep Location
+# Should point to your source directory, not site-packages
+
+# Check for .egg-link file
+ls .venv/lib/python*/site-packages/*.egg-link
+#+end_src
+
+*Solutions:*
+#+begin_src shell
+# Clean and reinstall
+pip uninstall your-package
+rm -rf *.egg-info
+pip install -e .
+
+# Force reinstall
+pip install -e . --force-reinstall --no-deps
+
+# Verify editable mode
+pip list -v | grep your-package  # Should show "Editable project location"
+#+end_src
+
+** Changes Not Taking Effect
+
+*Problem:* Code changes don't appear when running/testing
+
+*Diagnosis:*
+#+begin_src shell
+# Are you in editable mode?
+pip show your-package | grep Location
+
+# Check for cached bytecode
+find . -name "*.pyc" | head
+find . -type d -name "__pycache__" | head
+#+end_src
+
+*Solutions:*
+
+1. *Ensure editable mode is active:*
+   #+begin_src shell
+   pip install -e .
+   #+end_src
+
+2. *Clear Python cache:*
+   #+begin_src shell
+   # Remove all .pyc files and __pycache__ directories
+   find . -type f -name "*.pyc" -delete
+   find . -type d -name "__pycache__" -exec rm -rf {} +
+
+   # Or use pyclean (if available)
+   pyclean .
+   #+end_src
+
+3. *Restart Python interpreter:*
+   - If using interactive Python, quit and restart
+   - If using Jupyter, restart kernel
+   - Modules are cached after first import
+
+4. *Check you're editing the right file:*
+   #+begin_src shell
+   # Find which file Python is actually importing
+   python -c "import your_package.module; print(your_package.module.__file__)"
+   #+end_src
+
+** Dependencies Not Installing Automatically
+
+*Problem:* Package installs but required dependencies missing
+
+*Diagnosis:*
+#+begin_src shell
+# Check what dependencies are declared
+grep -A 10 "dependencies" pyproject.toml
+
+# Check what's actually installed
+pip list
+#+end_src
+
+*Solutions:*
+
+1. *Ensure dependencies listed in pyproject.toml:*
+   #+begin_src toml
+   [project]
+   dependencies = [
+       "requests>=2.28.0",
+       "click>=8.0.0",
+   ]
+   #+end_src
+
+2. *For development dependencies:*
+   #+begin_src toml
+   [project.optional-dependencies]
+   dev = [
+       "pytest>=7.0",
+       "pytest-cov>=3.0",
+   ]
+   #+end_src
+
+   #+begin_src shell
+   # Install with dev dependencies
+   pip install -e ".[dev]"
+   #+end_src
+
+3. *Reinstall to pick up new dependencies:*
+   #+begin_src shell
+   pip install -e . --force-reinstall
+   #+end_src
+
+* Package Structure and Configuration
+
+** Missing __init__.py Files
+
+*Problem:* Package structure seems correct but imports fail
+
+*Diagnosis:*
+#+begin_src shell
+# Find all Python packages without __init__.py
+find src -type d -name "*" | while read dir; do
+    if [ -n "$(find "$dir" -maxdepth 1 -name "*.py" -not -name "__init__.py")" ]; then
+        if [ ! -f "$dir/__init__.py" ]; then
+            echo "Missing __init__.py: $dir"
+        fi
+    fi
+done
+#+end_src
+
+*Solution:*
+
+Every directory that should be a Python package MUST have =__init__.py=:
+
+#+begin_src text
+src/
+└── your_package/
+    ├── __init__.py          # REQUIRED - can be empty
+    ├── module.py
+    └── subpackage/
+        ├── __init__.py      # REQUIRED - can be empty
+        └── submodule.py
+#+end_src
+
+#+begin_src shell
+# Create missing __init__.py files
+touch src/your_package/__init__.py
+touch src/your_package/subpackage/__init__.py
+#+end_src
+
+*Note:* While Python 3.3+ supports namespace packages without =__init__.py=, it's best practice to include them for clarity and compatibility.
+
+** Incorrect pyproject.toml Configuration
+
+*Problem:* Package not discovered during build
+
+*Common Configuration Errors:*
+
+1. *Incorrect package-dir:*
+   #+begin_src toml
+   # WRONG - missing package-dir
+   [tool.setuptools.packages.find]
+   where = ["src"]
+
+   # CORRECT - both sections needed
+   [tool.setuptools]
+   package-dir = {"" = "src"}
+
+   [tool.setuptools.packages.find]
+   where = ["src"]
+   #+end_src
+
+2. *Wrong package name in version():*
+   #+begin_src python
+   # In __init__.py - name must match [project] name exactly
+   from importlib.metadata import version
+
+   # WRONG - name mismatch
+   __version__ = version("my_package")  # When project name is "my-package"
+
+   # CORRECT - exact match with pyproject.toml [project] name
+   __version__ = version("my-package")
+   #+end_src
+
+3. *Invalid TOML syntax:*
+   #+begin_src shell
+   # Validate your pyproject.toml
+   pip install validate-pyproject
+   validate-pyproject pyproject.toml
+   #+end_src
+
+*Verification:*
+#+begin_src shell
+# Check what packages setuptools will find
+python -c "import setuptools; print(setuptools.find_packages('src'))"
+
+# Should output: ['your_package', 'your_package.subpackage', ...]
+#+end_src
+
+** Package Discovery Problems
+
+*Problem:* Some modules missing from built wheel
+
+*Diagnosis:*
+#+begin_src shell
+# Check what's in your wheel
+unzip -l dist/*.whl
+
+# Compare with source
+find src -name "*.py" | sort
+#+end_src
+
+*Common Issues:*
+
+1. *Packages not auto-discovered:*
+   #+begin_src toml
+   # Explicit include if auto-discovery fails
+   [tool.setuptools.packages.find]
+   where = ["src"]
+   include = ["your_package*"]  # Explicitly include
+   exclude = ["tests*"]          # Explicitly exclude
+   #+end_src
+
+2. *Missing data files:*
+   #+begin_src toml
+   # Include non-Python files
+   [tool.setuptools.package-data]
+   your_package = [
+       "*.txt",
+       "*.json",
+       "data/**/*",
+       "templates/**/*.html",
+   ]
+   #+end_src
+
+** Version Showing as "unknown"
+
+*Problem:* =__version__= returns "unknown" or raises =PackageNotFoundError=
+
+*Root Causes & Solutions:*
+
+1. *Package not installed* (MOST COMMON)
+   #+begin_src shell
+   pip install -e .
+   #+end_src
+
+2. *Package name mismatch:*
+   #+begin_src python
+   # In __init__.py
+   from importlib.metadata import version, PackageNotFoundError
+
+   try:
+       # This name MUST match [project] name in pyproject.toml EXACTLY
+       __version__ = version("exact-package-name-here")
+   except PackageNotFoundError:
+       __version__ = "unknown"
+   #+end_src
+
+   #+begin_src toml
+   # In pyproject.toml
+   [project]
+   name = "exact-package-name-here"  # Must match version() call
+   #+end_src
+
+3. *Wrong Python environment:*
+   #+begin_src shell
+   # Verify environment
+   which python
+   echo $VIRTUAL_ENV
+
+   # Reinstall in correct environment
+   pip install -e .
+   #+end_src
+
+4. *Using wrong metadata API:*
+   #+begin_src python
+   # WRONG - old API (deprecated)
+   import pkg_resources
+   __version__ = pkg_resources.get_distribution("package").version
+
+   # CORRECT - modern API (Python 3.8+)
+   from importlib.metadata import version
+   __version__ = version("package")
+   #+end_src
+
+* Building and Distribution
+
+** Stale Build Artifacts
+
+*Problem:* Old code persists in built wheels despite source changes
+
+*Symptoms:*
+- Changes not appearing in wheel
+- Old files still in distribution
+- Build seems to use cached data
+
+*Solution:*
+#+begin_src shell
+# Complete cleanup of all build artifacts
+rm -rf build/
+rm -rf dist/
+rm -rf *.egg-info
+rm -rf src/*.egg-info
+rm -rf .eggs/
+
+# Clean Python cache
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -rf {} +
+find . -type d -name ".pytest_cache" -exec rm -rf {} +
+rm -rf .coverage htmlcov/
+
+# Now build fresh
+python -m build
+#+end_src
+
+*Create a cleanup script:*
+#+begin_src shell
+# Save as clean.sh
+#!/bin/bash
+echo "Cleaning build artifacts..."
+rm -rf build/ dist/ *.egg-info src/*.egg-info .eggs/
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -rf {} +
+echo "Clean complete."
+#+end_src
+
+** Code Works in Development but Not in Built Wheel
+
+*Problem:* =ModuleNotFoundError= when using installed wheel, but editable install works fine
+
+*This is usually a packaging configuration issue, not a code issue.*
+
+*Diagnosis:*
+#+begin_src shell
+# Compare what's in the wheel vs. source
+echo "=== Source structure ==="
+find src -name "*.py" | sort
+
+echo "=== Wheel contents ==="
+unzip -l dist/*.whl | grep "\.py$"
+#+end_src
+
+*Common Causes & Solutions:*
+
+1. *Missing __init__.py files:*
+   #+begin_src shell
+   # Add __init__.py to all package directories
+   find src -type d -name "*" -exec sh -c '
+       if [ -n "$(find "$1" -maxdepth 1 -name "*.py")" ]; then
+           touch "$1/__init__.py"
+       fi
+   ' sh {} \;
+   #+end_src
+
+2. *Package not discovered by setuptools:*
+   #+begin_src shell
+   # Verify package discovery
+   python -c "import setuptools; print(setuptools.find_packages('src'))"
+
+   # If your package is missing, check pyproject.toml
+   #+end_src
+
+3. *Relative imports that work in editable but fail in wheel:*
+   #+begin_src python
+   # WRONG - implicit relative import
+   from module import function
+
+   # CORRECT - explicit absolute import
+   from your_package.module import function
+   #+end_src
+
+4. *Files outside package directory:*
+   #+begin_src text
+   # WRONG - code.py won't be included
+   src/
+   ├── your_package/
+   │   └── __init__.py
+   └── code.py  # Outside package!
+
+   # CORRECT
+   src/
+   └── your_package/
+       ├── __init__.py
+       └── code.py  # Inside package
+   #+end_src
+
+** Build Tool Errors
+
+*** "No module named 'setuptools'"
+
+#+begin_src shell
+# Update build tools
+python -m pip install --upgrade pip setuptools wheel build
+
+# Try build again
+python -m build
+#+end_src
+
+*** "error: invalid command 'bdist_wheel'"
+
+#+begin_src shell
+# Install wheel package
+pip install wheel
+
+# Use modern build tool instead
+pip install build
+python -m build
+#+end_src
+
+*** "Build backend requires 'setuptools>=42'"
+
+#+begin_src shell
+# Upgrade setuptools
+pip install "setuptools>=42"
+
+# Or update build-system requirements in pyproject.toml
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+#+end_src
+
+** Wrong Files Included in Distribution
+
+*Problem:* Test files in wheel, or data files missing
+
+*Diagnosis:*
+#+begin_src shell
+# List wheel contents
+unzip -l dist/*.whl
+
+# Extract and inspect
+unzip dist/*.whl -d /tmp/inspect
+tree /tmp/inspect  # or ls -la /tmp/inspect
+#+end_src
+
+*Solutions:*
+
+1. *Tests included in wheel* (using src layout prevents this):
+   #+begin_src text
+   # With src layout, tests are automatically excluded
+   project/
+   ├── src/your_package/  # Only this goes in wheel
+   └── tests/             # Automatically excluded
+   #+end_src
+
+2. *Missing data files:*
+   #+begin_src toml
+   [tool.setuptools.package-data]
+   your_package = [
+       "*.txt",
+       "*.json",
+       "data/**/*",
+       "templates/**/*.html",
+   ]
+   #+end_src
+
+3. *Including unwanted files:*
+   #+begin_src toml
+   [tool.setuptools]
+   exclude-package-data = {
+       "*" = ["*.c", "*.h", "*.so", "*.dylib"]
+   }
+   #+end_src
+
+* CLI Application Specific Issues
+
+** Command Not Found After Installation
+
+*Problem:* =bash: command not found: mycommand= after successful install
+
+*Root Causes & Solutions:*
+
+1. *Missing [project.scripts] section:*
+   #+begin_src toml
+   # In pyproject.toml
+   [project.scripts]
+   mycommand = "my_package.cli:main"
+   #           └─ package.module:function format
+   #+end_src
+
+2. *Entry point function not importable:*
+   #+begin_src shell
+   # Test if entry point works
+   python -c "from my_package.cli import main; print(main)"
+
+   # If this fails, the entry point won't work either
+   #+end_src
+
+3. *Command installed but not in PATH:*
+   #+begin_src shell
+   # Find where command was installed
+   find .venv -name "mycommand"
+   find ~/.local -name "mycommand"
+
+   # Check PATH
+   echo $PATH | tr ':' '\n'
+
+   # Add to PATH if needed (in ~/.bashrc or ~/.zshrc)
+   export PATH="$HOME/.local/bin:$PATH"
+   #+end_src
+
+4. *Reinstall needed after adding entry point:*
+   #+begin_src shell
+   pip uninstall my-package
+   pip install -e .
+
+   # Verify command exists
+   which mycommand
+   #+end_src
+
+** Entry Point Configuration Issues
+
+*Problem:* Entry point syntax errors or incorrect references
+
+*Correct format:*
+#+begin_src toml
+[project.scripts]
+command-name = "package.module:function"
+#              └─ no .py extension, colon before function
+#+end_src
+
+*Common mistakes:*
+#+begin_src toml
+# WRONG - .py extension
+mycommand = "my_package.cli.py:main"
+
+# WRONG - dot instead of colon
+mycommand = "my_package.cli.main"
+
+# WRONG - incorrect path
+mycommand = "src.my_package.cli:main"
+
+# CORRECT
+mycommand = "my_package.cli:main"
+#+end_src
+
+*Entry point function requirements:*
+#+begin_src python
+# In my_package/cli.py
+
+# Option 1: Function that returns exit code
+def main():
+    """CLI entry point."""
+    try:
+        # Your code here
+        return 0  # Success
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1  # Error
+
+# Option 2: Function that calls sys.exit
+def main():
+    """CLI entry point."""
+    try:
+        # Your code here
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+# Don't forget this for direct execution
+if __name__ == "__main__":
+    sys.exit(main())
+#+end_src
+
+** pipx Installation Issues
+
+*Problem:* Command works with pip but not with pipx
+
+*Diagnosis:*
+#+begin_src shell
+# Check pipx installation
+pipx list
+
+# Check pipx path
+pipx environment
+#+end_src
+
+*Solutions:*
+
+1. *PATH not configured:*
+   #+begin_src shell
+   # Ensure PATH is set
+   pipx ensurepath
+
+   # Restart shell or source config
+   source ~/.bashrc
+   #+end_src
+
+2. *Conflicting installation:*
+   #+begin_src shell
+   # Remove pip installation first
+   pip uninstall my-package
+
+   # Install with pipx
+   pipx install my-package
+   #+end_src
+
+3. *Installing from local wheel:*
+   #+begin_src shell
+   # Build first
+   python -m build
+
+   # Install with pipx
+   pipx install ./dist/my_package-*.whl
+
+   # Or install in editable mode
+   pipx install -e .
+   #+end_src
+
+* Testing Problems
+
+** Tests Can't Import Package
+
+*Problem:* =ModuleNotFoundError= when running pytest
+
+*Root Causes & Solutions:*
+
+1. *Package not installed* (MOST COMMON):
+   #+begin_src shell
+   pip install -e .
+   pytest
+   #+end_src
+
+2. *Wrong import in tests:*
+   #+begin_src python
+   # WRONG - importing from src
+   from src.my_package.module import function
+
+   # CORRECT - import from package name
+   from my_package.module import function
+   #+end_src
+
+3. *Missing pytest configuration:*
+   #+begin_src toml
+   # In pyproject.toml
+   [tool.pytest.ini_options]
+   pythonpath = ["src"]  # Add src to Python path
+   testpaths = ["tests"]
+   #+end_src
+
+4. *Running pytest from wrong directory:*
+   #+begin_src shell
+   # Must run from project root
+   cd /path/to/project  # Directory containing pyproject.toml
+   pytest
+   #+end_src
+
+** Tests Pass but Built Wheel Fails
+
+*Problem:* All tests pass in editable mode, but wheel doesn't work
+
+*This indicates a packaging issue, not a code issue.*
+
+*Diagnosis:*
+#+begin_src shell
+# Test the actual wheel in isolation
+python -m venv test_env
+source test_env/bin/activate
+pip install dist/*.whl
+
+# Try importing
+python -c "import my_package"
+
+# Clean up
+deactivate
+rm -rf test_env
+#+end_src
+
+*Common causes:*
+- Missing =__init__.py= files → See "Code Works in Development but Not in Built Wheel"
+- Files outside package directory → See "Package Structure and Configuration"
+- Incorrect package discovery → Check =pyproject.toml= configuration
+
+** Pytest Configuration Issues
+
+*Problem:* Pytest not finding tests or running incorrectly
+
+*Diagnosis:*
+#+begin_src shell
+# See what pytest is doing
+pytest --collect-only
+
+# Verbose output
+pytest -v
+
+# Show which tests pytest finds
+pytest --co -v
+#+end_src
+
+*Common configuration:*
+#+begin_src toml
+[tool.pytest.ini_options]
+# Where to find tests
+testpaths = ["tests"]
+
+# Test file patterns
+python_files = ["test_*.py", "*_test.py"]
+
+# Test class patterns
+python_classes = ["Test*"]
+
+# Test function patterns
+python_functions = ["test_*"]
+
+# Add src to path (if package not installed)
+pythonpath = ["src"]
+
+# Default options
+addopts = "-v --strict-markers"
+#+end_src
+
+* Debugging Techniques and Tools
+
+** Package Inspection Commands
+
+#+begin_src shell
+# Show package information
+pip show package-name
+
+# List all files in package
+pip show -f package-name
+
+# Check if package is editable
+pip list -v | grep package-name
+
+# Find package location
+python -c "import package; print(package.__file__)"
+
+# Show package contents
+python -c "import package; print(dir(package))"
+
+# Check version
+python -c "import package; print(package.__version__)"
+#+end_src
+
+** Python Path Debugging
+
+#+begin_src shell
+# Show sys.path (where Python looks for imports)
+python -c "import sys; print('\n'.join(sys.path))"
+
+# Show sys.path with line numbers
+python -c "import sys; import pprint; pprint.pprint(list(enumerate(sys.path)))"
+
+# Check if module is findable
+python -c "import importlib.util; print(importlib.util.find_spec('your_package'))"
+
+# Show all installed packages locations
+pip list -v
+#+end_src
+
+** Verbose Build and Install
+
+#+begin_src shell
+# Verbose pip install
+pip install -v .
+pip install -vv .   # Even more verbose
+pip install -vvv .  # Maximum verbosity
+
+# Verbose build
+python -m build -v
+
+# See what setuptools is doing
+python -m setuptools.build_meta -v
+#+end_src
+
+** Validation Tools
+
+#+begin_src shell
+# Validate pyproject.toml
+pip install validate-pyproject
+validate-pyproject pyproject.toml
+
+# Check Python files for syntax errors
+python -m py_compile src/your_package/*.py
+python -m compileall src/
+
+# Lint pyproject.toml
+pip install toml-sort
+toml-sort --check pyproject.toml
+
+# Check package metadata
+pip install twine
+twine check dist/*
+#+end_src
+
+** Import Debugging
+
+#+begin_src python
+# Debug import issues interactively
+python -v -c "import your_package"  # Shows all imports
+
+# Or in Python:
+import sys
+sys.path.insert(0, '/path/to/debug')  # Temporarily add path
+
+# See what gets imported
+import importlib
+import your_package
+print(importlib.util.find_spec('your_package'))
+print(your_package.__file__)
+print(your_package.__path__)  # For packages
+#+end_src
+
+** Wheel Inspection
+
+#+begin_src shell
+# List wheel contents
+unzip -l dist/*.whl
+
+# Extract wheel
+unzip dist/*.whl -d /tmp/wheel_inspect
+
+# View wheel metadata
+unzip -p dist/*.whl "*/METADATA" | less
+
+# Check wheel tags
+pip install wheel
+wheel unpack dist/*.whl
+#+end_src
+
+* Advanced Troubleshooting
+
+** Import System Edge Cases
+
+*** Circular Imports
+
+*Problem:* =ImportError: cannot import name 'X' from partially initialized module=
+
+*Solutions:*
+
+1. *Move import inside function:*
+   #+begin_src python
+   # Instead of module-level import
+   def function():
+       from .other_module import something  # Import here
+       # Use something
+   #+end_src
+
+2. *Restructure code to break cycle:*
+   #+begin_src text
+   # Move shared code to separate module
+   module_a.py  → module_a.py
+   module_b.py  → module_b.py
+                → shared.py  # New module
+   #+end_src
+
+*** Relative Import Issues
+
+*Problem:* =ImportError: attempted relative import with no known parent package=
+
+*Solutions:*
+#+begin_src python
+# WRONG - relative imports in scripts
+if __name__ == "__main__":
+    from .module import function  # Fails!
+
+# CORRECT - use absolute imports
+if __name__ == "__main__":
+    from package.module import function
+
+# Or run as module
+python -m package.script  # Instead of python package/script.py
+#+end_src
+
+** Dependency Conflicts
+
+*Problem:* Package requires conflicting versions of dependencies
+
+*Diagnosis:*
+#+begin_src shell
+# Check dependency tree
+pip install pipdeptree
+pipdeptree
+
+# Show conflicts
+pipdeptree --warn conflict
+
+# Check what would be installed
+pip install --dry-run your-package
+#+end_src
+
+*Solutions:*
+
+1. *Use more flexible version constraints:*
+   #+begin_src toml
+   # Too strict
+   dependencies = ["requests==2.28.0"]
+
+   # Better - allows range
+   dependencies = ["requests>=2.28.0,<3.0.0"]
+   #+end_src
+
+2. *Create isolated environment:*
+   #+begin_src shell
+   # Use pipx for CLI tools (isolation guaranteed)
+   pipx install your-package
+
+   # Or use dedicated venv
+   python -m venv isolated_env
+   source isolated_env/bin/activate
+   pip install your-package
+   #+end_src
+
+** Platform-Specific Issues
+
+*** Windows Path Issues
+
+#+begin_src shell
+# Windows uses backslashes
+.venv\Scripts\activate
+
+# In code, use pathlib for cross-platform paths
+from pathlib import Path
+config_file = Path(__file__).parent / "config.json"
+#+end_src
+
+*** macOS Permission Issues
+
+#+begin_src shell
+# Don't use sudo with pip
+# WRONG: sudo pip install package
+
+# CORRECT: Use virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install package
+#+end_src
+
+*** Linux Distribution Differences
+
+#+begin_src shell
+# Some distros separate python3-venv
+# Debian/Ubuntu
+sudo apt install python3-venv
+
+# Fedora
+sudo dnf install python3-venv
+
+# Check if venv is available
+python3 -m venv --help
+#+end_src
+
+** Build Backend Problems
+
+*Problem:* Build fails with cryptic setuptools errors
+
+*Diagnosis:*
+#+begin_src shell
+# Check build backend version
+pip show setuptools build wheel
+
+# Try different build backend
+pip install hatchling  # Alternative to setuptools
+#+end_src
+
+*Solutions:*
+
+1. *Update build tools:*
+   #+begin_src shell
+   pip install --upgrade setuptools build wheel pip
+   #+end_src
+
+2. *Pin build requirements:*
+   #+begin_src toml
+   [build-system]
+   requires = [
+       "setuptools>=65.0",
+       "wheel>=0.38.0",
+   ]
+   #+end_src
+
+3. *Switch build backend (if needed):*
+   #+begin_src toml
+   # Use hatchling instead of setuptools
+   [build-system]
+   requires = ["hatchling"]
+   build-backend = "hatchling.build"
+   #+end_src
+
+* Emergency Quick Fixes
+
+When everything fails, try these in order:
+
+#+begin_src shell
+# 1. Nuclear option - start completely fresh
+deactivate  # If in venv
+rm -rf .venv
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel build
+
+# 2. Clean everything
+rm -rf build/ dist/ *.egg-info src/*.egg-info .eggs/
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# 3. Reinstall package
+pip install -e .
+
+# 4. Verify
+python -c "import your_package; print(your_package.__version__)"
+pytest
+#+end_src
+
+* Useful Resources
+
+- *Python Packaging User Guide:* https://packaging.python.org
+- *Setuptools Documentation:* https://setuptools.pypa.io
+- *Build Tool:* https://pypa-build.readthedocs.io
+- *pip Documentation:* https://pip.pypa.io
+- *Python Import System:* https://docs.python.org/3/reference/import.html
+- *Troubleshooting on Stack Overflow:* https://stackoverflow.com/questions/tagged/python-packaging
