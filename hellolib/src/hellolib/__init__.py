@@ -1,10 +1,9 @@
-"""Simple hellolib package."""
-
-from importlib.metadata import version, PackageNotFoundError
+"""Simple greeting library."""
 
 try:
-    __version__ = version("hellolib")
-except PackageNotFoundError:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)
+except (ImportError, PackageNotFoundError):
     __version__ = "unknown"
 
 # Define public interface

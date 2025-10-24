@@ -1,32 +1,57 @@
 # Hellolib
 
-A simple Python package for hellolib messages.
+A simple Python package for greeting messages.
+
+## Installation
+```bash
+pip install hellolib
+```
 
 ## Usage
+```python
+from hellolib.hello import say_hello, say_goodbye
 
+print(say_hello())              # Hello, World!
+print(say_hello("Python"))      # Hello, Python!
+print(say_goodbye("Friend"))    # Goodbye, Friend!
+```
+
+## Development
 ```bash
-# Create environment:
-python -m venv .venv       # Or: python3 -m venv .venv
-
-# Activate environment
+# Create and activate environment
+python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install the package in development mode
-pip install -e .
+# Install in development mode with dev dependencies
+pip install -e ".[dev]"
 
-# Install Development Dependencies
-python -m pip install --upgrade pip
-pip install build pytest pytest-cov
+# Run tests
+pytest
 
-# Running tests
-pytes
+# Run tests with coverage
+pytest --cov=hellolib --cov-report=html
 
-# Building:
+# Build distribution
 python -m build
 
-# Checking (without installation)
-python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+# Clean up
+deactivate
+rm -rf .venv
+```
 
-# Installation
-pip install ./dist/hellolib-0.1.0-py3-none-any.whl
+## Testing the Built Package
+```bash
+# Create test environment
+python -m venv test_env
+source test_env/bin/activate  # On Windows: test_env\Scripts\activate
+
+# Install the wheel
+pip install ./dist/hellolib-1.1.0-py3-none-any.whl
+
+# Test it
+python -c "from hellolib.hello import say_hello; print(say_hello('Wheel'))"
+
+# Clean up
+deactivate
+rm -rf test_env
 ```

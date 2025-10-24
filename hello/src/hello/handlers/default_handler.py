@@ -1,5 +1,6 @@
 """Default handler for unrecognized commands."""
 
+
 def handle_default():
     """Return the default message.
 

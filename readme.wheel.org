@@ -415,35 +415,60 @@ hellolib/
 #+begin_src markdown :tangle hellolib/README.md :mkdirp yes
 # Hellolib
 
-A simple Python package for hellolib messages.
+A simple Python package for greeting messages.
+
+## Installation
+```bash
+pip install hellolib
+```
 
 ## Usage
+```python
+from hellolib.hello import say_hello, say_goodbye
 
+print(say_hello())              # Hello, World!
+print(say_hello("Python"))      # Hello, Python!
+print(say_goodbye("Friend"))    # Goodbye, Friend!
+```
+
+## Development
 ```bash
-# Create environment:
-python -m venv .venv       # Or: python3 -m venv .venv
-
-# Activate environment
+# Create and activate environment
+python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install the package in development mode
-pip install -e .
+# Install in development mode with dev dependencies
+pip install -e ".[dev]"
 
-# Install Development Dependencies
-python -m pip install --upgrade pip
-pip install build pytest pytest-cov
+# Run tests
+pytest
 
-# Running tests
-pytes
+# Run tests with coverage
+pytest --cov=hellolib --cov-report=html
 
-# Building:
+# Build distribution
 python -m build
 
-# Checking (without installation)
-python -c "from hellolib.hello import say_hello; print(say_hello('Python Wheel'))"
+# Clean up
+deactivate
+rm -rf .venv
+```
 
-# Installation
-pip install ./dist/hellolib-0.1.0-py3-none-any.whl
+## Testing the Built Package
+```bash
+# Create test environment
+python -m venv test_env
+source test_env/bin/activate  # On Windows: test_env\Scripts\activate
+
+# Install the wheel
+pip install ./dist/hellolib-1.1.0-py3-none-any.whl
+
+# Test it
+python -c "from hellolib.hello import say_hello; print(say_hello('Wheel'))"
+
+# Clean up
+deactivate
+rm -rf test_env
 ```
 #+end_src
 
@@ -454,60 +479,97 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hellolib"
-version = "0.1.1"
-description = "A simple hellolib package"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+version = "1.1.0"
+description = "A simple greeting library"
 readme = "README.md"
 requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+license = "MIT"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
 ]
 
+[project.urls]
+"Homepage" = "https://github.com/yourusername/hello"
+
+# Optional dependencies for development
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "build",
+    "wheel",
+    "setuptools",
+    "requests",  # if used in dev/testing
+]
+
+# Setuptools-specific configuration
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Pytest configuration
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-v"
 #+end_src
 
 #+begin_src python :tangle hellolib/src/hellolib/__init__.py :mkdirp yes
-"""Simple hellolib package."""
-
-from importlib.metadata import version, PackageNotFoundError
+"""Simple greeting library."""
 
 try:
-    __version__ = version("hellolib")
-except PackageNotFoundError:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)
+except (ImportError, PackageNotFoundError):
     __version__ = "unknown"
 
 # Define public interface
 __all__ = ["__version__"]
 #+end_src
 
-#+RESULTS:
-: None
-
 #+begin_src python :tangle hellolib/src/hellolib/hello.py :mkdirp yes
-"""Hellolib functions."""
+"""Greeting functions."""
+
 
 def say_hello(name="World"):
-    """Return a hellolib message.
+    """Return a greeting message.
+
     Args:
         name (str, optional): Name to greet. Defaults to "World".
+
     Returns:
-        str: Hellolib message
+        str: Greeting message
+
+    Examples:
+        >>> say_hello()
+        'Hello, World!'
+        >>> say_hello("Python")
+        'Hello, Python!'
     """
     return f"Hello, {name}!"
 
+
 def say_goodbye(name="World"):
     """Return a goodbye message.
+
     Args:
         name (str, optional): Name to say goodbye to. Defaults to "World".
+
     Returns:
         str: Goodbye message
+
+    Examples:
+        >>> say_goodbye()
+        'Goodbye, World!'
+        >>> say_goodbye("Python")
+        'Goodbye, Python!'
     """
     return f"Goodbye, {name}!"
 #+end_src
 
-#+begin_src python :tangle hellolib/tests/init.py :mkdirp yes
+#+begin_src python :tangle hellolib/tests/__init__.py :mkdirp yes
+"""Tests package for hellolib."""
 # This file can be empty - it just indicates tests is a package
 #+end_src
 
@@ -515,10 +577,8 @@ def say_goodbye(name="World"):
 """Tests for the hellolib package."""
 
 import unittest
-from hellolib.hello import say_hello
-from hellolib.hello import say_goodbye
+from hellolib.hello import say_hello, say_goodbye
 
-"""Tests for the hellolib package."""
 
 class TestHellolib(unittest.TestCase):
     """Test case for hellolib functions."""
@@ -531,6 +591,10 @@ class TestHellolib(unittest.TestCase):
         """Test say_hello with custom name."""
         self.assertEqual(say_hello("Python"), "Hello, Python!")
 
+    def test_say_hello_empty_string(self):
+        """Test say_hello with empty string."""
+        self.assertEqual(say_hello(""), "Hello, !")
+
     def test_say_goodbye_default(self):
         """Test say_goodbye with default arguments."""
         self.assertEqual(say_goodbye(), "Goodbye, World!")
@@ -538,6 +602,12 @@ class TestHellolib(unittest.TestCase):
     def test_say_goodbye_custom(self):
         """Test say_goodbye with custom name."""
         self.assertEqual(say_goodbye("Python"), "Goodbye, Python!")
+
+    def test_return_types(self):
+        """Test that functions return strings."""
+        self.assertIsInstance(say_hello(), str)
+        self.assertIsInstance(say_goodbye(), str)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -547,6 +617,7 @@ if __name__ == "__main__":
 """Test version information."""
 
 from hellolib import __version__
+
 
 def test_version_exists():
     """Test that version is defined."""
@@ -564,36 +635,39 @@ def test_version_format():
 
 #+begin_src python :tangle hellolib/use_hellolib_example.py :mkdirp yes
 #!/usr/bin/env python3
+"""Example usage of hellolib package."""
 
-from hellolib.hello import say_hello;
+from hellolib.hello import say_hello, say_goodbye
 
-# Default hellolib
-print(say_hello());  # Outputs: Hello, World!
+# Default greeting
+print(say_hello())  # Outputs: Hello, World!
 
-# Custom hellolib
-print(say_hello("Python"));  # Outputs: Hello, Python!
+# Custom greeting
+print(say_hello("Python"))  # Outputs: Hello, Python!
 
-# For goodbye messages
-from hellolib.hello import say_goodbye
-print(say_goodbye("Friend"));  # Outputs: Goodbye, Friend!
+# Goodbye message
+print(say_goodbye("Friend"))  # Outputs: Goodbye, Friend!
 #+end_src
 
-*** Building and use
+*** Building and Testing
 
-See [[file:hellolib/README.md]]
+**** Development Workflow
 
-Or run example:
+For development workflow, see [[file:hellolib/README.md]]
+
+**** Running the Example
 
 #+begin_src shell-script
+# After installing in dev mode (pip install -e .)
 python ./use_hellolib_example.py
 #+end_src
 
 Expected output:
 
 #+begin_src text
-# Hello, World!
-# Hello, Python!
-# Goodbye, Friend!
+Hello, World!
+Hello, Python!
+Goodbye, Friend!
 #+end_src
 
 ** Example2, *'hello'* (CLI application)
@@ -621,51 +695,99 @@ hello/
     └── test_hello.py
 #+end_src
 
-***  Source code
+*** Source code
 
 #+begin_src markdown :tangle hello/README.md :mkdirp yes
 # Hello
 
-A simple Python CLI package for greeting commands.
+A simple Python CLI application for greeting commands.
 
-## Installation (system-wide)
+## Installation
 
+### System-wide Installation (Recommended for CLI tools)
 ```bash
 pipx install hello
+```
+
+### Regular Installation
+```bash
+pip install hello
 ```
 
 ## Usage
 
 After installation, you can use the package from the command line:
-
 ```bash
 hello hi         # Outputs: Hello
 hello bay        # Outputs: Good-bay
 hello anything   # Outputs: Have a nice day
+hello --version  # Shows version information
 hello --help     # Shows help information
 ```
 
 ## Development
 
 ```bash
-# Create environment:
-python -m venv .venv       # Or: python3 -m venv .venv
-
-# Activate environment
+# Create and activate environment
+python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install the package in development mode
-pip install -e .
+# Install in development mode
+pip install -e ".[dev]"
 
-# Install Development Dependencies
-python -m pip install --upgrade pip
-pip install build pytest pytest-cov
+# Run all tests
+pytest
 
-# Running tests
-python -m unittest discover  # Or: pytes
+# Run tests with coverage
+pytest --cov=hello --cov-report=html
 
-# Building:
+# Run specific test
+pytest tests/test_hello.py -v
+
+# Clean previous builds
+rm -rf build/ dist/ *.egg-info
+
+# Build distribution
 python -m build
+
+# Clean up
+deactivate
+rm -rf .venv
+```
+
+## Testing the Built Package
+
+###  Test environment
+```bash
+# Create test environment
+python -m venv test_env
+source test_env/bin/activate  # On Windows: test_env\Scripts\activate
+
+# Install the wheel
+pip install ./dist/hello-1.0.0-py3-none-any.whl
+
+# Test commands
+hello hi
+hello bay
+hello --version
+
+# Clean up
+deactivate
+rm -rf test_env
+```
+
+### System-wide Installation
+```bash
+# Install with pipx for testing
+pipx install ./dist/hello-1.0.0-py3-none-any.whl
+
+# Test commands
+hello hi
+hello bay
+hello --version
+
+# Uninstall
+pipx uninstall hello
 ```
 #+end_src
 
@@ -678,37 +800,54 @@ build-backend = "setuptools.build_meta"
 name = "hello"
 version = "1.0.0"
 description = "A CLI greeting application"
+readme = "README.md"
+requires-python = ">=3.7"
+license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
-readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "MIT"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Environment :: Console",
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/hello"
+
+# This section is REQUIRED for pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "build",
+    "wheel",
+    "setuptools",
+    "requests",  # if used in dev/testing
 ]
 
+# This creates an executable command called 'hello'
+# that calls the main() function in hello.cli module
 [project.scripts]
 hello = "hello.cli:main"
 
+# Setuptools-specific configuration
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["hello", "hello.handlers"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hello*"]
+
+# Pytest configuration
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "-v"
 #+end_src
 
 #+begin_src python :tangle hello/src/hello/__init__.py :mkdirp yes
 """Hello CLI application package."""
 
-from importlib.metadata import version, PackageNotFoundError
-
 try:
-    __version__ = version("hello")
-except PackageNotFoundError:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)
+except (ImportError, PackageNotFoundError):
     __version__ = "unknown"
 
 # Define public interface
@@ -730,14 +869,15 @@ def create_parser() -> argparse.ArgumentParser:
     """Create and configure argument parser.
 
     Returns:
-        Configured ArgumentParser instance
+        argparse.ArgumentParser: Configured ArgumentParser instance
     """
     parser = argparse.ArgumentParser(
-        prog="hello",
+        prog="hello",  # Use command name, not module name (__name__ would be "hello.cli")
         description="A simple greeting CLI application",
         epilog="Examples:\n"
-               "  hello              # Greet the world\n"
-               "  hello Python       # Greet Python\n"
+               "  hello              # Default greeting\n"
+               "  hello hi           # Say hello\n"
+               "  hello bay          # Say goodbye\n"
                "  hello --version    # Show version",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -746,14 +886,17 @@ def create_parser() -> argparse.ArgumentParser:
         "--version",
         "-v",
         action="version",
-        version=f"%(prog)s v{__version__}",
+        version=f"%(prog)s {__version__}",
         help="Show program version and exit"
     )
 
     parser.add_argument(
-        'command', nargs='?', default='default',
-        help='Command to execute (hi, bay, or any other text)'
+        "command",
+        nargs="?",
+        default="default",
+        help="Command to execute: 'hi', 'bay', or any other text for default message"
     )
+
     return parser
 
 
@@ -761,27 +904,27 @@ def main():
     """Main entry point for CLI.
 
     Returns:
-        Exit code (0 for success, non-zero for error)
+        int: Exit code (0 for success, non-zero for error)
     """
-
     parser = create_parser()
     args = parser.parse_args()
 
     # Map commands to their handlers
     handlers = {
-        'hi': handle_hi,
-        'bay': handle_bay,
+        "hi": handle_hi,
+        "bay": handle_bay,
     }
 
     try:
         # Get the appropriate handler or use the default
         handler = handlers.get(args.command, handle_default)
-        # Execute the handler
+        # Execute the handler and print result
         print(handler())
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
@@ -789,10 +932,17 @@ if __name__ == "__main__":
 
 #+begin_src python :tangle hello/src/hello/handlers/__init__.py :mkdirp yes
 """Handler modules for the hello package."""
+
+from hello.handlers.hi_handler import handle_hi
+from hello.handlers.bay_handler import handle_bay
+from hello.handlers.default_handler import handle_default
+
+__all__ = ["handle_hi", "handle_bay", "handle_default"]
 #+end_src
 
 #+begin_src python :tangle hello/src/hello/handlers/hi_handler.py :mkdirp yes
 """Handler for the 'hi' command."""
+
 
 def handle_hi():
     """Return the 'Hello' greeting.
@@ -806,6 +956,7 @@ def handle_hi():
 #+begin_src python :tangle hello/src/hello/handlers/bay_handler.py :mkdirp yes
 """Handler for the 'bay' command."""
 
+
 def handle_bay():
     """Return the 'Good-bay' message.
 
@@ -818,6 +969,7 @@ def handle_bay():
 #+begin_src python :tangle hello/src/hello/handlers/default_handler.py :mkdirp yes
 """Default handler for unrecognized commands."""
 
+
 def handle_default():
     """Return the default message.
 
@@ -828,6 +980,7 @@ def handle_default():
 #+end_src
 
 #+begin_src python :tangle hello/tests/__init__.py :mkdirp yes
+"""Tests package for hello CLI application."""
 # This file can be empty - it just indicates tests is a package
 #+end_src
 
@@ -842,6 +995,7 @@ from hello.cli import main
 from hello.handlers.hi_handler import handle_hi
 from hello.handlers.bay_handler import handle_bay
 from hello.handlers.default_handler import handle_default
+
 
 class TestHandlers(unittest.TestCase):
     """Test case for handler functions."""
@@ -858,35 +1012,50 @@ class TestHandlers(unittest.TestCase):
         """Test the default handler."""
         self.assertEqual(handle_default(), "Have a nice day")
 
+
 class TestCLI(unittest.TestCase):
     """Test case for CLI functionality."""
 
-    @patch('sys.argv', ['hello', 'hi'])
+    @patch("sys.argv", ["hello", "hi"])
     def test_cli_hi(self):
         """Test CLI with 'hi' command."""
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        main()
+        result = main()
         sys.stdout = sys.__stdout__
         self.assertEqual(captured_output.getvalue().strip(), "Hello")
+        self.assertEqual(result, 0)
 
-    @patch('sys.argv', ['hello', 'bay'])
+    @patch("sys.argv", ["hello", "bay"])
     def test_cli_bay(self):
         """Test CLI with 'bay' command."""
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        main()
+        result = main()
         sys.stdout = sys.__stdout__
         self.assertEqual(captured_output.getvalue().strip(), "Good-bay")
+        self.assertEqual(result, 0)
 
-    @patch('sys.argv', ['hello', 'unknown'])
+    @patch("sys.argv", ["hello", "unknown"])
     def test_cli_default(self):
         """Test CLI with an unknown command."""
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        main()
+        result = main()
         sys.stdout = sys.__stdout__
         self.assertEqual(captured_output.getvalue().strip(), "Have a nice day")
+        self.assertEqual(result, 0)
+
+    @patch("sys.argv", ["hello"])
+    def test_cli_no_command(self):
+        """Test CLI with no command (should use default)."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        result = main()
+        sys.stdout = sys.__stdout__
+        self.assertEqual(captured_output.getvalue().strip(), "Have a nice day")
+        self.assertEqual(result, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -963,6 +1132,8 @@ def test_cli_module_version():
     assert __version__ in output, f"Expected version {__version__} in output: {output}"
 #+end_src
 
-*** Building and use
+*** Building and Testing
+
+For development workflow and testing commands, see [[file:hello/README.md]]
 
 See [[file:hello/README.md]]

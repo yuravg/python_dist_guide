@@ -6,24 +6,42 @@ build-backend = "setuptools.build_meta"
 name = "hello"
 version = "1.0.0"
 description = "A CLI greeting application"
+readme = "README.md"
+requires-python = ">=3.7"
+license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
-readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "MIT"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Environment :: Console",
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/hello"
+
+# This section is REQUIRED for pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+    "build",
+    "wheel",
+    "setuptools",
+    "requests",  # if used in dev/testing
 ]
 
+# This creates an executable command called 'hello'
+# that calls the main() function in hello.cli module
 [project.scripts]
 hello = "hello.cli:main"
 
+# Setuptools-specific configuration
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["hello", "hello.handlers"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hello*"]
+
+# Pytest configuration
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "-v"

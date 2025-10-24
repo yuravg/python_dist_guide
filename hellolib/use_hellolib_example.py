@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
+"""Example usage of hellolib package."""
 
-from hellolib.hello import say_hello;
+from hellolib.hello import say_hello, say_goodbye
 
-# Default hellolib
-print(say_hello());  # Outputs: Hello, World!
+# Default greeting
+print(say_hello())  # Outputs: Hello, World!
 
-# Custom hellolib
-print(say_hello("Python"));  # Outputs: Hello, Python!
+# Custom greeting
+print(say_hello("Python"))  # Outputs: Hello, Python!
 
-# For goodbye messages
-from hellolib.hello import say_goodbye
-print(say_goodbye("Friend"));  # Outputs: Goodbye, Friend!
+# Goodbye message
+print(say_goodbye("Friend"))  # Outputs: Goodbye, Friend!

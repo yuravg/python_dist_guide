@@ -1,10 +1,9 @@
 """Hello CLI application package."""
 
-from importlib.metadata import version, PackageNotFoundError
-
 try:
-    __version__ = version("hello")
-except PackageNotFoundError:
+    from importlib.metadata import version, PackageNotFoundError
+    __version__ = version(__name__)
+except (ImportError, PackageNotFoundError):
     __version__ = "unknown"
 
 # Define public interface

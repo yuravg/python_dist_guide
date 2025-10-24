@@ -2,6 +2,7 @@
 
 from hellolib import __version__
 
+
 def test_version_exists():
     """Test that version is defined."""
     assert __version__ is not None
