@@ -311,7 +311,7 @@ This is the modern, preferred approach defined by PEP 517/518.
 
 #+begin_src toml
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -319,7 +319,7 @@ name = "my-package"
 version = "1.0.0"
 description = "A sample Python package"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
@@ -340,10 +340,8 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=3.0",
-    "build",
-    "wheel",
-    "setuptools",
-    "requests",  # if used in dev/testing
+    "mypy>=1.0",
+    "build>=1.0",
 ]
 
 docs = [
@@ -371,6 +369,21 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --strict-markers"
+
+# Mypy type checking configuration
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_equality = true
 
 # Coverage configuration
 [tool.coverage.run]
@@ -613,7 +626,7 @@ rm -rf test_env
 
 #+begin_src toml :tangle hellolib/pyproject.toml :mkdirp yes
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -621,7 +634,7 @@ name = "hellolib"
 version = "1.1.0"
 description = "A simple greeting library"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
@@ -635,10 +648,8 @@ authors = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=3.0",
-    "build",
-    "wheel",
-    "setuptools",
-    "requests",  # if used in dev/testing
+    "mypy>=1.0",
+    "build>=1.0",
 ]
 
 # Setuptools-specific configuration
@@ -652,6 +663,21 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
+
+# Mypy type checking configuration
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_equality = true
 #+end_src
 
 #+begin_src python :tangle hellolib/src/hellolib/__init__.py :mkdirp yes
@@ -663,22 +689,35 @@ try:
 except (ImportError, PackageNotFoundError):
     __version__ = "unknown"
 
+from hellolib.hello import (
+    say_hello,
+    say_goodbye,
+    greet_multiple,
+    format_greeting,
+)
+
 # Define public interface
-__all__ = ["__version__"]
+__all__ = [
+    "__version__",
+    "say_hello",
+    "say_goodbye",
+    "greet_multiple",
+    "format_greeting",
+]
 #+end_src
 
 #+begin_src python :tangle hellolib/src/hellolib/hello.py :mkdirp yes
-"""Greeting functions."""
+"""Greeting functions demonstrating Python 3.10+ features."""
 
 
-def say_hello(name="World"):
+def say_hello(name: str = "World") -> str:
     """Return a greeting message.
 
     Args:
-        name (str, optional): Name to greet. Defaults to "World".
+        name: Name to greet. Defaults to "World".
 
     Returns:
-        str: Greeting message
+        Greeting message
 
     Examples:
         >>> say_hello()
@@ -689,14 +728,14 @@ def say_hello(name="World"):
     return f"Hello, {name}!"
 
 
-def say_goodbye(name="World"):
+def say_goodbye(name: str = "World") -> str:
     """Return a goodbye message.
 
     Args:
-        name (str, optional): Name to say goodbye to. Defaults to "World".
+        name: Name to say goodbye to. Defaults to "World".
 
     Returns:
-        str: Goodbye message
+        Goodbye message
 
     Examples:
         >>> say_goodbye()
@@ -705,6 +744,78 @@ def say_goodbye(name="World"):
         'Goodbye, Python!'
     """
     return f"Goodbye, {name}!"
+
+
+def greet_multiple(
+    names: list[str] | tuple[str, ...],
+    greeting: str = "Hello"
+) -> list[str]:
+    """Greet multiple people with modern type hints.
+
+    Demonstrates Python 3.10+ features:
+    - Union types with | operator (PEP 604)
+    - Built-in generics like list[str], tuple[str, ...] (PEP 585)
+
+    Args:
+        names: List or tuple of names to greet
+        greeting: Greeting word to use. Defaults to "Hello".
+
+    Returns:
+        List of greeting messages
+
+    Examples:
+        >>> greet_multiple(["Alice", "Bob"])
+        ['Hello, Alice!', 'Hello, Bob!']
+        >>> greet_multiple(("Charlie",), "Hi")
+        ['Hi, Charlie!']
+        >>> greet_multiple([])
+        []
+    """
+    return [f"{greeting}, {name}!" for name in names]
+
+
+def format_greeting(
+    name: str,
+    *,
+    style: str | None = None,
+    suffix: str = "!"
+) -> str:
+    """Format a greeting with various styles using pattern matching.
+
+    Demonstrates Python 3.10+ features:
+    - Union with None using | operator
+    - Keyword-only arguments with *
+    - Structural pattern matching (PEP 634)
+
+    Args:
+        name: Name to greet
+        style: Greeting style ('formal', 'casual', or None for default)
+        suffix: Punctuation to end with. Defaults to "!".
+
+    Returns:
+        Formatted greeting message
+
+    Examples:
+        >>> format_greeting("Alice")
+        'Hello, Alice!'
+        >>> format_greeting("Bob", style="formal")
+        'Good day, Bob!'
+        >>> format_greeting("Charlie", style="casual")
+        'Hey, Charlie!'
+        >>> format_greeting("Dave", style="casual", suffix=".")
+        'Hey, Dave.'
+    """
+    match style:
+        case "formal":
+            greeting = "Good day"
+        case "casual":
+            greeting = "Hey"
+        case None:
+            greeting = "Hello"
+        case _:
+            greeting = "Hello"
+
+    return f"{greeting}, {name}{suffix}"
 #+end_src
 
 #+begin_src python :tangle hellolib/tests/__init__.py :mkdirp yes
@@ -715,41 +826,92 @@ def say_goodbye(name="World"):
 #+begin_src python :tangle hellolib/tests/test_hellolib.py :mkdirp yes
 """Tests for the hellolib package."""
 
-import unittest
-from hellolib.hello import say_hello, say_goodbye
+from hellolib.hello import (
+    say_hello,
+    say_goodbye,
+    greet_multiple,
+    format_greeting,
+)
 
 
-class TestHellolib(unittest.TestCase):
-    """Test case for hellolib functions."""
-
-    def test_say_hello_default(self):
-        """Test say_hello with default arguments."""
-        self.assertEqual(say_hello(), "Hello, World!")
-
-    def test_say_hello_custom(self):
-        """Test say_hello with custom name."""
-        self.assertEqual(say_hello("Python"), "Hello, Python!")
-
-    def test_say_hello_empty_string(self):
-        """Test say_hello with empty string."""
-        self.assertEqual(say_hello(""), "Hello, !")
-
-    def test_say_goodbye_default(self):
-        """Test say_goodbye with default arguments."""
-        self.assertEqual(say_goodbye(), "Goodbye, World!")
-
-    def test_say_goodbye_custom(self):
-        """Test say_goodbye with custom name."""
-        self.assertEqual(say_goodbye("Python"), "Goodbye, Python!")
-
-    def test_return_types(self):
-        """Test that functions return strings."""
-        self.assertIsInstance(say_hello(), str)
-        self.assertIsInstance(say_goodbye(), str)
+def test_say_hello_default() -> None:
+    """Test say_hello with default arguments."""
+    assert say_hello() == "Hello, World!"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_say_hello_custom() -> None:
+    """Test say_hello with custom name."""
+    assert say_hello("Python") == "Hello, Python!"
+
+
+def test_say_hello_empty_string() -> None:
+    """Test say_hello with empty string."""
+    assert say_hello("") == "Hello, !"
+
+
+def test_say_goodbye_default() -> None:
+    """Test say_goodbye with default arguments."""
+    assert say_goodbye() == "Goodbye, World!"
+
+
+def test_say_goodbye_custom() -> None:
+    """Test say_goodbye with custom name."""
+    assert say_goodbye("Python") == "Goodbye, Python!"
+
+
+def test_return_types() -> None:
+    """Test that functions return strings."""
+    assert isinstance(say_hello(), str)
+    assert isinstance(say_goodbye(), str)
+
+
+# Tests for Python 3.10+ features
+def test_greet_multiple_list() -> None:
+    """Test greet_multiple with list (demonstrates list[str] type hint)."""
+    result = greet_multiple(["Alice", "Bob"])
+    assert result == ["Hello, Alice!", "Hello, Bob!"]
+
+
+def test_greet_multiple_tuple() -> None:
+    """Test greet_multiple with tuple (demonstrates tuple[str, ...] type hint)."""
+    result = greet_multiple(("Charlie",))
+    assert result == ["Hello, Charlie!"]
+
+
+def test_greet_multiple_empty() -> None:
+    """Test greet_multiple with empty list."""
+    assert greet_multiple([]) == []
+
+
+def test_greet_multiple_custom_greeting() -> None:
+    """Test greet_multiple with custom greeting."""
+    result = greet_multiple(["Dave"], greeting="Hi")
+    assert result == ["Hi, Dave!"]
+
+
+def test_format_greeting_default() -> None:
+    """Test format_greeting with default style."""
+    assert format_greeting("Alice") == "Hello, Alice!"
+
+
+def test_format_greeting_formal() -> None:
+    """Test format_greeting with formal style (demonstrates pattern matching)."""
+    assert format_greeting("Bob", style="formal") == "Good day, Bob!"
+
+
+def test_format_greeting_casual() -> None:
+    """Test format_greeting with casual style (demonstrates pattern matching)."""
+    assert format_greeting("Charlie", style="casual") == "Hey, Charlie!"
+
+
+def test_format_greeting_custom_suffix() -> None:
+    """Test format_greeting with custom suffix."""
+    assert format_greeting("Dave", style="casual", suffix=".") == "Hey, Dave."
+
+
+def test_format_greeting_unknown_style() -> None:
+    """Test format_greeting with unknown style (demonstrates default case)."""
+    assert format_greeting("Eve", style="unknown") == "Hello, Eve!"
 #+end_src
 
 #+begin_src python :tangle hellolib/tests/test_version.py :mkdirp yes
@@ -758,14 +920,14 @@ if __name__ == "__main__":
 from hellolib import __version__
 
 
-def test_version_exists():
+def test_version_exists() -> None:
     """Test that version is defined."""
     assert __version__ is not None
     assert isinstance(__version__, str)
     assert __version__ != "unknown"
 
 
-def test_version_format():
+def test_version_format() -> None:
     """Test version follows semantic versioning."""
     parts = __version__.split(".")
     assert len(parts) >= 2, "Version should have at least major.minor"
@@ -827,7 +989,8 @@ hello/
 │       │   ├── __init__.py
 │       │   ├── hi_handler.py
 │       │   ├── bay_handler.py
-│       │   └── default_handler.py
+│       │   ├── default_handler.py
+│       │   └── info_handler.py
 └── tests/
     ├── __init__.py
     ├── test_version.py
@@ -932,7 +1095,7 @@ pipx uninstall hello
 
 #+begin_src toml :tangle hello/pyproject.toml :mkdirp yes
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -940,7 +1103,7 @@ name = "hello"
 version = "1.0.0"
 description = "A CLI greeting application"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
@@ -954,10 +1117,8 @@ authors = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=3.0",
-    "build",
-    "wheel",
-    "setuptools",
-    "requests",  # if used in dev/testing
+    "mypy>=1.0",
+    "build>=1.0",
 ]
 
 # This creates an executable command called 'hello'
@@ -978,6 +1139,21 @@ include = ["hello*"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-v"
+
+# Mypy type checking configuration
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_equality = true
 #+end_src
 
 #+begin_src python :tangle hello/src/hello/__init__.py :mkdirp yes
@@ -1039,26 +1215,25 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> int:
     """Main entry point for CLI.
 
     Returns:
-        int: Exit code (0 for success, non-zero for error)
+        Exit code (0 for success, non-zero for error)
     """
     parser = create_parser()
     args = parser.parse_args()
 
-    # Map commands to their handlers
-    handlers = {
-        "hi": handle_hi,
-        "bay": handle_bay,
-    }
-
     try:
-        # Get the appropriate handler or use the default
-        handler = handlers.get(args.command, handle_default)
-        # Execute the handler and print result
-        print(handler())
+        match args.command:
+            case "hi":
+                result = handle_hi()
+            case "bay":
+                result = handle_bay()
+            case _:
+                result = handle_default()
+
+        print(result)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -1075,19 +1250,20 @@ if __name__ == "__main__":
 from hello.handlers.hi_handler import handle_hi
 from hello.handlers.bay_handler import handle_bay
 from hello.handlers.default_handler import handle_default
+from hello.handlers.info_handler import handle_info
 
-__all__ = ["handle_hi", "handle_bay", "handle_default"]
+__all__ = ["handle_hi", "handle_bay", "handle_default", "handle_info"]
 #+end_src
 
 #+begin_src python :tangle hello/src/hello/handlers/hi_handler.py :mkdirp yes
 """Handler for the 'hi' command."""
 
 
-def handle_hi():
+def handle_hi() -> str:
     """Return the 'Hello' greeting.
 
     Returns:
-        str: The greeting message
+        The greeting message
     """
     return "Hello"
 #+end_src
@@ -1096,11 +1272,11 @@ def handle_hi():
 """Handler for the 'bay' command."""
 
 
-def handle_bay():
+def handle_bay() -> str:
     """Return the 'Good-bay' message.
 
     Returns:
-        str: The farewell message
+        The farewell message
     """
     return "Good-bay"
 #+end_src
@@ -1109,13 +1285,81 @@ def handle_bay():
 """Default handler for unrecognized commands."""
 
 
-def handle_default():
+def handle_default() -> str:
     """Return the default message.
 
     Returns:
-        str: The default friendly message
+        The default friendly message
     """
     return "Have a nice day"
+#+end_src
+
+#+begin_src python :tangle hello/src/hello/handlers/info_handler.py :mkdirp yes
+"""Handler demonstrating advanced Python 3.10+ features.
+
+This handler showcases structural pattern matching capabilities
+introduced in Python 3.10 (PEP 634).
+"""
+
+
+def handle_info(args: list[str] | None = None) -> str:
+    """Process info command with structural pattern matching.
+
+    Demonstrates Python 3.10+ features:
+    - Union types with | operator (PEP 604)
+    - Built-in generics like list[str] (PEP 585)
+    - Structural pattern matching (PEP 634)
+
+    Args:
+        args: List of arguments to process. Defaults to None.
+
+    Returns:
+        Information message based on the arguments
+
+    Examples:
+        >>> handle_info(None)
+        'No information requested'
+        >>> handle_info([])
+        'No information requested'
+        >>> handle_info(['version'])
+        'Version: 1.0.0'
+        >>> handle_info(['python'])
+        'Python: 3.10+'
+        >>> handle_info(['author', 'email'])
+        'Contact: author at email'
+    """
+    match args:
+        # Match None or empty list
+        case None | []:
+            return "No information requested"
+
+        # Match single item patterns
+        case ["version"]:
+            return "Version: 1.0.0"
+
+        case ["python"]:
+            return "Python: 3.10+"
+
+        case ["help"]:
+            return "Available info: version, python, author, help"
+
+        # Match two items for contact info
+        case ["author", email]:
+            return f"Contact: author at {email}"
+
+        # Match list with specific first element
+        case ["config", *rest]:
+            config_items = ", ".join(rest) if rest else "none"
+            return f"Configuration: {config_items}"
+
+        # Catch-all with guard (if clause)
+        case [first, *_] if len(args) > 3:
+            return f"Too many arguments (got {len(args)}, expected ≤ 3)"
+
+        # Final catch-all
+        case _:
+            items = ", ".join(args) if isinstance(args, list) else str(args)
+            return f"Unknown info request: {items}"
 #+end_src
 
 #+begin_src python :tangle hello/tests/__init__.py :mkdirp yes
@@ -1126,78 +1370,120 @@ def handle_default():
 #+begin_src python :tangle hello/tests/test_hello.py :mkdirp yes
 """Tests for the hello package."""
 
-import unittest
-import io
-import sys
 from unittest.mock import patch
+import pytest
 from hello.cli import main
 from hello.handlers.hi_handler import handle_hi
 from hello.handlers.bay_handler import handle_bay
 from hello.handlers.default_handler import handle_default
+from hello.handlers.info_handler import handle_info
 
 
-class TestHandlers(unittest.TestCase):
-    """Test case for handler functions."""
-
-    def test_handle_hi(self):
-        """Test the hi handler."""
-        self.assertEqual(handle_hi(), "Hello")
-
-    def test_handle_bay(self):
-        """Test the bay handler."""
-        self.assertEqual(handle_bay(), "Good-bay")
-
-    def test_handle_default(self):
-        """Test the default handler."""
-        self.assertEqual(handle_default(), "Have a nice day")
+def test_handle_hi() -> None:
+    """Test the hi handler."""
+    assert handle_hi() == "Hello"
 
 
-class TestCLI(unittest.TestCase):
-    """Test case for CLI functionality."""
-
-    @patch("sys.argv", ["hello", "hi"])
-    def test_cli_hi(self):
-        """Test CLI with 'hi' command."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        result = main()
-        sys.stdout = sys.__stdout__
-        self.assertEqual(captured_output.getvalue().strip(), "Hello")
-        self.assertEqual(result, 0)
-
-    @patch("sys.argv", ["hello", "bay"])
-    def test_cli_bay(self):
-        """Test CLI with 'bay' command."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        result = main()
-        sys.stdout = sys.__stdout__
-        self.assertEqual(captured_output.getvalue().strip(), "Good-bay")
-        self.assertEqual(result, 0)
-
-    @patch("sys.argv", ["hello", "unknown"])
-    def test_cli_default(self):
-        """Test CLI with an unknown command."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        result = main()
-        sys.stdout = sys.__stdout__
-        self.assertEqual(captured_output.getvalue().strip(), "Have a nice day")
-        self.assertEqual(result, 0)
-
-    @patch("sys.argv", ["hello"])
-    def test_cli_no_command(self):
-        """Test CLI with no command (should use default)."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        result = main()
-        sys.stdout = sys.__stdout__
-        self.assertEqual(captured_output.getvalue().strip(), "Have a nice day")
-        self.assertEqual(result, 0)
+def test_handle_bay() -> None:
+    """Test the bay handler."""
+    assert handle_bay() == "Good-bay"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_handle_default() -> None:
+    """Test the default handler."""
+    assert handle_default() == "Have a nice day"
+
+
+@patch("sys.argv", ["hello", "hi"])
+def test_cli_hi(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CLI with 'hi' command."""
+    result = main()
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Hello"
+    assert result == 0
+
+
+@patch("sys.argv", ["hello", "bay"])
+def test_cli_bay(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CLI with 'bay' command."""
+    result = main()
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Good-bay"
+    assert result == 0
+
+
+@patch("sys.argv", ["hello", "unknown"])
+def test_cli_default(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CLI with an unknown command."""
+    result = main()
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Have a nice day"
+    assert result == 0
+
+
+@patch("sys.argv", ["hello"])
+def test_cli_no_command(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test CLI with no command (should use default)."""
+    result = main()
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "Have a nice day"
+    assert result == 0
+
+
+# Tests for info_handler demonstrating Python 3.10+ pattern matching
+def test_info_handler_none() -> None:
+    """Test info handler with None."""
+    assert handle_info(None) == "No information requested"
+
+
+def test_info_handler_empty() -> None:
+    """Test info handler with empty list."""
+    assert handle_info([]) == "No information requested"
+
+
+def test_info_handler_version() -> None:
+    """Test info handler requesting version."""
+    assert handle_info(["version"]) == "Version: 1.0.0"
+
+
+def test_info_handler_python() -> None:
+    """Test info handler requesting Python version."""
+    assert handle_info(["python"]) == "Python: 3.10+"
+
+
+def test_info_handler_help() -> None:
+    """Test info handler requesting help."""
+    assert handle_info(["help"]) == "Available info: version, python, author, help"
+
+
+def test_info_handler_author() -> None:
+    """Test info handler with author contact (demonstrates pattern with capture)."""
+    result = handle_info(["author", "test@example.com"])
+    assert result == "Contact: author at test@example.com"
+
+
+def test_info_handler_config() -> None:
+    """Test info handler with config (demonstrates wildcard pattern)."""
+    result = handle_info(["config", "debug", "verbose"])
+    assert result == "Configuration: debug, verbose"
+
+
+def test_info_handler_config_empty() -> None:
+    """Test info handler with config but no items."""
+    result = handle_info(["config"])
+    assert result == "Configuration: none"
+
+
+def test_info_handler_too_many_args() -> None:
+    """Test info handler with too many arguments (demonstrates guard clause)."""
+    result = handle_info(["a", "b", "c", "d"])
+    assert result == "Too many arguments (got 4, expected ≤ 3)"
+
+
+def test_info_handler_unknown() -> None:
+    """Test info handler with unknown request (demonstrates catch-all)."""
+    result = handle_info(["unknown", "request"])
+    assert result == "Unknown info request: unknown, request"
 #+end_src
 
 #+begin_src python :tangle hello/tests/test_version.py :mkdirp yes
@@ -1208,21 +1494,21 @@ import sys
 from hello import __version__
 
 
-def test_version_exists():
+def test_version_exists() -> None:
     """Test that version can be imported."""
     assert __version__ is not None
     assert isinstance(__version__, str)
     assert __version__ != "unknown"
 
 
-def test_version_format():
+def test_version_format() -> None:
     """Test version follows semantic versioning."""
     parts = __version__.split(".")
     assert len(parts) >= 2, "Version should have at least major.minor"
     assert all(part.isdigit() for part in parts), "Version parts should be numeric"
 
 
-def test_cli_version_flag():
+def test_cli_version_flag() -> None:
     """Test that CLI --version flag works."""
     result = subprocess.run(
         ["hello", "--version"],
@@ -1240,7 +1526,7 @@ def test_cli_version_flag():
     assert __version__ in output, f"Expected version {__version__} in output: {output}"
 
 
-def test_cli_version_shorthand():
+def test_cli_version_shorthand() -> None:
     """Test that CLI -v flag works."""
     result = subprocess.run(
         ["hello", "-v"],
@@ -1257,7 +1543,7 @@ def test_cli_version_shorthand():
     assert __version__ in output, f"Expected version {__version__} in output: {output}"
 
 
-def test_cli_module_version():
+def test_cli_module_version() -> None:
     """Test running CLI as module with --version."""
     result = subprocess.run(
         [sys.executable, "-m", "hello.cli", "--version"],

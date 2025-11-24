@@ -43,26 +43,25 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> int:
     """Main entry point for CLI.
 
     Returns:
-        int: Exit code (0 for success, non-zero for error)
+        Exit code (0 for success, non-zero for error)
     """
     parser = create_parser()
     args = parser.parse_args()
 
-    # Map commands to their handlers
-    handlers = {
-        "hi": handle_hi,
-        "bay": handle_bay,
-    }
-
     try:
-        # Get the appropriate handler or use the default
-        handler = handlers.get(args.command, handle_default)
-        # Execute the handler and print result
-        print(handler())
+        match args.command:
+            case "hi":
+                result = handle_hi()
+            case "bay":
+                result = handle_bay()
+            case _:
+                result = handle_default()
+
+        print(result)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

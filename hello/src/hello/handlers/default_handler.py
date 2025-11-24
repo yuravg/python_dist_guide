@@ -1,10 +1,10 @@
 """Default handler for unrecognized commands."""
 
 
-def handle_default():
+def handle_default() -> str:
     """Return the default message.
 
     Returns:
-        str: The default friendly message
+        The default friendly message
     """
     return "Have a nice day"

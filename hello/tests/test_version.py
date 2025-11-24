@@ -5,21 +5,21 @@ import sys
 from hello import __version__
 
 
-def test_version_exists():
+def test_version_exists() -> None:
     """Test that version can be imported."""
     assert __version__ is not None
     assert isinstance(__version__, str)
     assert __version__ != "unknown"
 
 
-def test_version_format():
+def test_version_format() -> None:
     """Test version follows semantic versioning."""
     parts = __version__.split(".")
     assert len(parts) >= 2, "Version should have at least major.minor"
     assert all(part.isdigit() for part in parts), "Version parts should be numeric"
 
 
-def test_cli_version_flag():
+def test_cli_version_flag() -> None:
     """Test that CLI --version flag works."""
     result = subprocess.run(
         ["hello", "--version"],
@@ -37,7 +37,7 @@ def test_cli_version_flag():
     assert __version__ in output, f"Expected version {__version__} in output: {output}"
 
 
-def test_cli_version_shorthand():
+def test_cli_version_shorthand() -> None:
     """Test that CLI -v flag works."""
     result = subprocess.run(
         ["hello", "-v"],
@@ -54,7 +54,7 @@ def test_cli_version_shorthand():
     assert __version__ in output, f"Expected version {__version__} in output: {output}"
 
 
-def test_cli_module_version():
+def test_cli_module_version() -> None:
     """Test running CLI as module with --version."""
     result = subprocess.run(
         [sys.executable, "-m", "hello.cli", "--version"],
