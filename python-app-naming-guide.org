@@ -1,0 +1,135 @@
+#+TITLE: Python Application Naming Guide
+
+#+begin_quote
+Quick reference for Python application naming conventions. Covers both CLI and GUI
+applications. External names use hyphens, internal names use underscores.
+#+end_quote
+
+* The Golden Rule
+
+#+begin_quote
+*External names* (repository, distribution, CLI command): =my-tool= (hyphens)
+*Internal names* (package, modules): =my_tool= (underscores)
+#+end_quote
+
+This pattern is used throughout the Python application ecosystem.
+
+* CLI vs GUI Applications
+
+** The Key Difference
+
+|------------------+------------------------------------+------------------|
+| Application Type | Entry Point Configuration          | User Interface   |
+|------------------+------------------------------------+------------------|
+| CLI Application  | =[project.scripts]=                  | Terminal command |
+| GUI Application  | =[project.gui-scripts]= or =python -m= | Desktop/Window   |
+
+** CLI Applications
+- Need a command name users type in terminal
+- Command uses hyphens (easy to type: =my-tool=)
+- Configured in =pyproject.toml= under =[project.scripts]=
+
+Example:
+#+begin_src toml
+[project.scripts]
+my-tool = "my_tool.cli:main"  # User types: my-tool
+#+end_src
+
+** GUI Applications
+- No command-line entry point needed
+- Users launch via desktop icon, Python module, or GUI launcher
+- May use =[project.gui-scripts]= for Windows =.pyw= files
+- Or launch with =python -m package_name=
+
+Example:
+#+begin_src toml
+[project.gui-scripts]
+my-app = "my_app.main:gui_main"  # Creates GUI launcher
+#+end_src
+
+** Same Pattern for Both
+
+The Golden Rule applies to repository, distribution, and package names:
+
+| Component    | CLI App           | GUI App             | Format      |
+|--------------+-------------------+---------------------+-------------|
+| Repository   | =my-tool=           | =my-app=              | hyphens     |
+| Distribution | =my-tool=           | =my-app=              | hyphens     |
+| Package      | =my_tool=           | =my_app=              | underscores |
+| Entry Point  | =my-tool= (command) | =(optional launcher)= | varies      |
+
+* Quick Reference
+
+| Component         | Format      | Example          |
+|-------------------+-------------+------------------|
+| GitHub repository | hyphens     | =data-backup-tool= |
+| Distribution name | hyphens     | =data-backup-tool= |
+| Package name      | underscores | =data_backup_tool= |
+| CLI command       | hyphens     | =data-backup-tool= |
+
+* Popular Tools Follow This Pattern
+
+| Tool           | Distribution   | Package        | Command        |
+|----------------+----------------+----------------+----------------|
+| =black=          | =black=          | =black=          | =black=          |
+| =pytest=         | =pytest=         | =pytest=         | =pytest=         |
+| =pre-commit=     | =pre-commit=     | =pre_commit=     | =pre-commit=     |
+| =docker-compose= | =docker-compose= | =docker_compose= | =docker-compose= |
+
+* Complete Example: Data Backup Tool
+
+** Naming Matrix
+
+| Component         | Name             | Why                                            |
+|-------------------+------------------+------------------------------------------------|
+| GitHub repository | =data-backup-tool= | Lowercase with hyphens (standard for repos)    |
+| Distribution name | =data-backup-tool= | Lowercase with hyphens (for =pip install=)       |
+| Package name      | =data_backup_tool= | Lowercase with underscores (Python identifier) |
+| CLI command       | =data-backup-tool= | Lowercase with hyphens (easy to type)          |
+
+** Configuration & Usage
+
+*pyproject.toml:*
+#+begin_src toml
+[project]
+name = "data-backup-tool"
+version = "1.0.0"
+
+[project.scripts]
+data-backup-tool = "data_backup_tool.cli:main"
+#+end_src
+
+*Directory structure:*
+#+begin_src
+data-backup-tool/              # GitHub repo name
+├── pyproject.toml
+├── src/
+│   └── data_backup_tool/      # Package (Python identifier)
+│       ├── __init__.py
+│       └── cli.py
+└── tests/
+#+end_src
+
+*Installation and usage:*
+#+begin_src bash
+pip install data-backup-tool
+data-backup-tool --help
+data-backup-tool backup /path/to/data
+#+end_src
+
+* Why These Conventions?
+
+*Hyphens for external names:*
+- Standard Unix/Linux convention (=docker-compose=, =npm-install=, =pre-commit=)
+- Easier to type than underscores in shell
+- Matches PyPI package naming standard
+- Consistent user experience
+
+*Underscores for internal names:*
+- Python identifiers cannot contain hyphens
+- Required for =import data_backup_tool=
+- Follows PEP 8 naming conventions
+
+*Avoid PascalCase* (=DataBackupTool=):
+- Reserved for Python class names, not projects
+- Not standard for CLI tools (examples: =pip=, =pytest=, =black=)

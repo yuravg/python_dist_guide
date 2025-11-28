@@ -11,25 +11,23 @@ A brief guides to creating Python distributions.
 
 ** Terminology
 
-- *Package*: A directory containing Python modules (.py files) and an =__init__.py= file, which
-  designates it as a Python package. Packages can include sub-packages, forming a hierarchical
-  structure. Naming convention: use lowercase letters (=my_package=, not =MyPackage= or =my-package=).
+- *Package*: A directory containing Python modules (.py files) and an =__init__.py= file. Can
+  include sub-packages. \\
+  Naming: =lowercase_with_underscores=
 
-- *Module*: A single Python file (.py) that contains functions, classes, variables, or other
-  definitions. Modules are parts of packages and libraries.
+- *Module*: A single Python file containing functions, classes, or variables.\\
+  Naming: =lowercase_with_underscores.py=
 
-- *Library*: A collection of packages and/or modules designed to be imported and reused. Libraries
-  provide reusable functionality, such as utilities or tools, to other codebases. For naming,
-  use suffixes like =utils=, =lib=, or =tools=.
+- *Library*: A collection of packages/modules designed to be imported and reused.\\
+  Naming: Use suffixes like =utils=, =lib=, or =tools=
 
-- *Application*: A Python project that's meant to be used as a standalone program. It might
-  include a command-line interface (CLI) or graphical user interface (GUI), or other entry
-  points for user interaction.
+- *Application*: A standalone program with entry points (CLI, GUI, etc.).\\
+  Naming: Distribution uses hyphens (=my-tool=), package uses underscores (=my_tool=)
 
-- *Distribution*: A packaged version of a Python project (package, library, or application) that
-  can be shared and installed. Distributions are typically created using tools like setuptools
-  or poetry and include metadata.
+- *Distribution*: The packaged, installable version of a project.\\
+  Naming: =lowercase-with-hyphens= (used in =pip install <name>=)
 
-* Guides:
+* Guides
 
-[[file:readme.wheel.org][Python Wheel Distributions Guide]]
+- [[file:python-app-naming-guide.org][Python Application Naming Guide]]
+- [[file:readme.wheel.org][Python Wheel Distributions Guide]]
