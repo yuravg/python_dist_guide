@@ -1,5 +1,4 @@
 #+TITLE: Python Package Development - Troubleshooting Guide
-#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
 
 #+begin_quote
 A practical troubleshooting companion to the Python Wheel Distributions Guide.

@@ -1,5 +1,4 @@
 #+TITLE: Python Package Development - Command Reference Card
-#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
 
 * Command Reference Card
 

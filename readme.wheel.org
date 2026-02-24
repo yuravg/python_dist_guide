@@ -1,6 +1,4 @@
 #+TITLE: Python Wheel Distributions Guide
-#+AUTHOR: Yuriy Gritsenko
-#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
 
 #+begin_quote
 A brief guide to creating wheeled Python distributions.

@@ -1,6 +1,6 @@
 #+TITLE: Python Package Distribution Guide
 #+AUTHOR: Yuriy Gritsenko
-#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
+#+LINK: python_dist_guide https://github.com/yuravg/python-dist-guide
 
 #+begin_quote
 A brief guides to creating Python distributions.

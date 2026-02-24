@@ -1,5 +1,4 @@
 #+TITLE: Python Package Development - Version Management Strategy
-#+LINK: python_dist_guide https://github.com/yuravg/python_dist_guide
 
 * Contents                                                         :noexport:
 :PROPERTIES:
